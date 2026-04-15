@@ -15,45 +15,6 @@ const navLinks = [
   { href: "/pulso", label: "Pulso" },
 ];
 
-function PhoenixLogo({ className = "h-8 w-8" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="phoenix-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ef4444" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-      </defs>
-      <path d="M12 2C12 2 9.5 6 9.5 9C9.5 10.5 10 11.5 10.5 12.5C9 11 7 10 7 10C7 10 8 13 9.5 15C10.2 15.9 11 16.5 12 17C13 16.5 13.8 15.9 14.5 15C16 13 17 10 17 10C17 10 15 11 13.5 12.5C14 11.5 14.5 10.5 14.5 9C14.5 6 12 2 12 2Z" fill="url(#phoenix-grad)" />
-      <path d="M12 17C12 17 10 19 10 20.5C10 21.6 10.9 22.5 12 22.5C13.1 22.5 14 21.6 14 20.5C14 19 12 17 12 17Z" fill="url(#phoenix-grad)" opacity="0.7" />
-    </svg>
-  );
-}
-
-function HamburgerIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="h-6 w-6">
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="h-6 w-6">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
-}
-
-function ChevronDown() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
 interface UserInfo {
   username: string;
   avatar: string;
@@ -66,7 +27,6 @@ export function Navbar() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  /* Read user cookie on mount */
   useEffect(() => {
     try {
       const cookie = document.cookie.split("; ").find(c => c.startsWith("phoenix_user="));
@@ -77,19 +37,11 @@ export function Navbar() {
     } catch { /* no session */ }
   }, []);
 
-  /* close mobile nav on route change */
-  useEffect(() => {
-    setMobileOpen(false);
-    setDropdownOpen(false);
-  }, [pathname]);
-
-  /* lock body scroll when mobile menu is open */
+  useEffect(() => { setMobileOpen(false); setDropdownOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
-
-  /* close dropdown on click outside */
   useEffect(() => {
     if (!dropdownOpen) return;
     const handler = () => setDropdownOpen(false);
@@ -98,16 +50,17 @@ export function Navbar() {
   }, [dropdownOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-lg border-b border-border">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border" style={{ background: "rgba(8,8,15,0.92)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
+      <nav className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <img src="/logo-emblem.png" alt="Phoenix Arena" className="h-9 w-9 rounded-full" />
-          <span className="text-gradient text-lg font-bold tracking-tight">PHOENIX ARENA</span>
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <img src="/logo-emblem.png" alt="Phoenix Arena" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full" />
+          <span className="text-gradient text-base sm:text-lg font-bold tracking-tight hidden sm:inline">PHOENIX ARENA</span>
+          <span className="text-gradient text-base font-bold tracking-tight sm:hidden">PHOENIX</span>
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-0.5">
           {navLinks.map((link) => {
             const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
@@ -115,7 +68,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isActive ? "text-red-400" : "text-muted hover:text-foreground"
+                  isActive ? "text-red-400 bg-red-500/10" : "text-muted hover:text-foreground hover:bg-surface-2"
                 }`}
               >
                 {link.label}
@@ -125,9 +78,8 @@ export function Navbar() {
         </div>
 
         {/* Desktop actions */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3">
           {user ? (
-            /* ── Logged in state ── */
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setDropdownOpen(!dropdownOpen); }}
@@ -141,12 +93,11 @@ export function Navbar() {
                   </div>
                 )}
                 <span className="text-sm font-medium max-w-[120px] truncate">{user.username}</span>
-                <ChevronDown />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
               </button>
 
-              {/* Dropdown */}
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-52 border border-border rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "rgba(13,13,24,0.97)", backdropFilter: "blur(20px)" }}>
                   <Link href="/perfil" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                     Mi Perfil
@@ -173,18 +124,11 @@ export function Navbar() {
               )}
             </div>
           ) : (
-            /* ── Logged out state ── */
             <>
-              <Link
-                href="/login"
-                className="border border-border-light text-foreground hover:bg-surface-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-              >
+              <Link href="/login" className="border border-border-light text-foreground hover:bg-surface-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
                 Iniciar Sesion
               </Link>
-              <Link
-                href="/registro"
-                className="bg-gradient-main text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
-              >
+              <Link href="/registro" className="bg-gradient-main text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity">
                 Registrarse
               </Link>
             </>
@@ -194,92 +138,93 @@ export function Navbar() {
         {/* Mobile hamburger */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-muted hover:text-foreground transition-colors"
+          className="lg:hidden p-2 text-foreground"
           aria-label="Menu"
         >
-          {mobileOpen ? <CloseIcon /> : <HamburgerIcon />}
+          {mobileOpen ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-6 w-6"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-6 w-6"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          )}
         </button>
       </nav>
 
-      {/* Mobile backdrop */}
+      {/* ── Mobile fullscreen menu ───────────────────────────── */}
       <div
-        className={`fixed inset-0 top-16 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ${
-          mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={() => setMobileOpen(false)}
-      />
-
-      {/* Mobile slide-over */}
-      <div
-        className={`fixed top-16 right-0 bottom-0 w-72 bg-surface border-l border-border z-50 md:hidden transition-transform duration-300 ease-out ${
-          mobileOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed inset-0 top-14 sm:top-16 z-50 lg:hidden transition-all duration-300 ${
+          mobileOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
         }`}
       >
-        <div className="flex flex-col p-6 gap-1">
-          {/* User info (mobile) */}
-          {user && (
-            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
-              {user.avatar ? (
-                <img src={user.avatar} alt={user.username} className="w-9 h-9 rounded-full" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-main flex items-center justify-center text-white text-xs font-bold">
-                  {user.username.slice(0, 2).toUpperCase()}
+        {/* Solid dark background — NOT transparent */}
+        <div className="absolute inset-0" style={{ background: "rgba(8,8,15,0.98)" }} onClick={() => setMobileOpen(false)} />
+
+        {/* Menu content */}
+        <div className={`relative h-full overflow-y-auto transition-transform duration-300 ${mobileOpen ? "translate-y-0" : "-translate-y-4"}`}>
+          <div className="flex flex-col p-6 pb-24">
+            {/* User card (mobile) */}
+            {user && (
+              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.username} className="w-12 h-12 rounded-full border-2 border-border" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-main flex items-center justify-center text-white text-sm font-bold">
+                    {user.username.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-base font-semibold truncate">{user.username}</p>
+                  <p className="text-sm text-muted capitalize">{user.provider}</p>
                 </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{user.username}</p>
-                <p className="text-xs text-muted capitalize">{user.provider}</p>
               </div>
-            </div>
-          )}
-
-          {navLinks.map((link) => {
-            const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  isActive ? "text-red-400 bg-surface-2" : "text-muted hover:text-foreground hover:bg-surface-2"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-
-          <div className="mt-6 pt-6 border-t border-border flex flex-col gap-3">
-            {user ? (
-              <>
-                <Link href="/perfil" className="px-4 py-3 text-sm font-medium rounded-lg text-muted hover:text-foreground hover:bg-surface-2 transition-colors">
-                  Mi Perfil
-                </Link>
-                <Link href="/wallet" className="px-4 py-3 text-sm font-medium rounded-lg text-muted hover:text-foreground hover:bg-surface-2 transition-colors">
-                  Monedero
-                </Link>
-                <a
-                  href="/api/auth/logout"
-                  className="border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-lg px-4 py-3 text-sm font-medium text-center transition-colors"
-                >
-                  Cerrar sesion
-                </a>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="border border-border-light text-foreground hover:bg-surface-2 rounded-lg px-4 py-3 text-sm font-medium text-center transition-colors"
-                >
-                  Iniciar Sesion
-                </Link>
-                <Link
-                  href="/registro"
-                  className="bg-gradient-main text-white rounded-lg px-4 py-3 text-sm font-medium text-center hover:opacity-90 transition-opacity"
-                >
-                  Registrarse
-                </Link>
-              </>
             )}
+
+            {/* Nav links — big and easy to tap */}
+            <div className="space-y-1">
+              {navLinks.map((link) => {
+                const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`block px-4 py-4 text-base font-medium rounded-xl transition-colors ${
+                      isActive ? "text-red-400 bg-red-500/10 border border-red-500/20" : "text-foreground hover:bg-surface-2"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* User actions or auth buttons */}
+            <div className="mt-8 pt-6 border-t border-border space-y-2">
+              {user ? (
+                <>
+                  {[
+                    { href: "/perfil", label: "Mi Perfil" },
+                    { href: "/wallet", label: "Monedero" },
+                    { href: "/boveda", label: "Mi Boveda" },
+                    { href: "/resultados", label: "Resultados" },
+                  ].map((link) => (
+                    <Link key={link.href} href={link.href} className="block px-4 py-3.5 text-base font-medium rounded-xl text-muted hover:text-foreground hover:bg-surface-2 transition-colors">
+                      {link.label}
+                    </Link>
+                  ))}
+                  <a href="/api/auth/logout" className="block px-4 py-3.5 text-base font-medium rounded-xl text-red-400 hover:bg-red-500/10 transition-colors mt-4 border border-red-500/20 text-center">
+                    Cerrar sesion
+                  </a>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="block py-4 rounded-xl border border-border text-base font-semibold text-foreground text-center hover:bg-surface-2 transition-colors">
+                    Iniciar Sesion
+                  </Link>
+                  <Link href="/registro" className="block py-4 rounded-xl bg-gradient-main text-white text-base font-semibold text-center hover:opacity-90 transition-opacity">
+                    Registrarse
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
