@@ -19,74 +19,7 @@ interface Challenge {
   tiempoPublicado: string;
 }
 
-const mockChallenges: Challenge[] = [
-  {
-    id: '1',
-    creador: 'xDarkSniper',
-    creadorTier: 'pro',
-    modalidad: '1v1',
-    juego: 'Warzone',
-    monto: 20,
-    estado: 'Abierto',
-    reglas: 'Kills cuenta, sin vehiculos, Rebirth Island',
-    tiempoPublicado: 'Hace 5 min',
-  },
-  {
-    id: '2',
-    creador: 'NightOwlMX',
-    creadorTier: 'am',
-    modalidad: 'Duo',
-    juego: 'Warzone',
-    monto: 10,
-    estado: 'Abierto',
-    reglas: 'Placement + kills, cualquier mapa',
-    tiempoPublicado: 'Hace 12 min',
-  },
-  {
-    id: '3',
-    creador: 'ElReyCR',
-    creadorTier: 'pro',
-    modalidad: '1v1',
-    juego: 'Warzone',
-    monto: 50,
-    estado: 'En Progreso',
-    reglas: 'Gulag 1v1, mejor de 3',
-    tiempoPublicado: 'Hace 20 min',
-  },
-  {
-    id: '4',
-    creador: 'LaFlacaCO',
-    creadorTier: 'detri',
-    modalidad: 'Trio',
-    juego: 'Warzone',
-    monto: 5,
-    estado: 'Abierto',
-    reglas: 'Kills totales del equipo, Urzikstan',
-    tiempoPublicado: 'Hace 30 min',
-  },
-  {
-    id: '5',
-    creador: 'ToxicBunny99',
-    creadorTier: 'am',
-    modalidad: '1v1',
-    juego: 'Warzone',
-    monto: 10,
-    estado: 'En Progreso',
-    reglas: 'Solo kills, Rebirth Island, 20 min',
-    tiempoPublicado: 'Hace 45 min',
-  },
-  {
-    id: '6',
-    creador: 'VamosPibe',
-    creadorTier: 'am',
-    modalidad: 'Duo',
-    juego: 'Warzone',
-    monto: 25,
-    estado: 'Abierto',
-    reglas: 'Placement cuenta doble, Fortune\'s Keep',
-    tiempoPublicado: 'Hace 1 hora',
-  },
-];
+const mockChallenges: Challenge[] = [];
 
 function tierBadgeClass(tier: Challenge['creadorTier']) {
   if (tier === 'pro') return 'badge-pro';

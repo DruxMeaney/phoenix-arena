@@ -46,18 +46,7 @@ interface Transaction {
   estado: TxStatus;
 }
 
-const transactions: Transaction[] = [
-  { fecha: "27 Mar 2026", tipo: "Deposito", descripcion: "Deposito via Stripe", monto: "+$50.00", estado: "Completado" },
-  { fecha: "26 Mar 2026", tipo: "Reto", descripcion: "Reto vs ArrobaJota", monto: "+$15.00", estado: "Completado" },
-  { fecha: "25 Mar 2026", tipo: "Comision", descripcion: "Comision plataforma 10%", monto: "-$1.50", estado: "Completado" },
-  { fecha: "24 Mar 2026", tipo: "Retiro", descripcion: "Retiro a cuenta bancaria", monto: "-$100.00", estado: "Procesando" },
-  { fecha: "23 Mar 2026", tipo: "Reto", descripcion: "Reto vs NexusFire", monto: "-$10.00", estado: "Completado" },
-  { fecha: "22 Mar 2026", tipo: "Deposito", descripcion: "Deposito via OpenPay", monto: "+$20.00", estado: "Completado" },
-  { fecha: "21 Mar 2026", tipo: "Reto", descripcion: "Torneo Semanal #14", monto: "+$35.00", estado: "Completado" },
-  { fecha: "20 Mar 2026", tipo: "Comision", descripcion: "Comision plataforma 10%", monto: "-$3.50", estado: "Completado" },
-  { fecha: "19 Mar 2026", tipo: "Deposito", descripcion: "Deposito via Stripe", monto: "+$100.00", estado: "Fallido" },
-  { fecha: "18 Mar 2026", tipo: "Retiro", descripcion: "Retiro a cuenta bancaria", monto: "-$50.00", estado: "Completado" },
-];
+const transactions: Transaction[] = [];
 
 const predefinedAmounts = [5, 10, 20, 50, 100];
 
@@ -99,8 +88,8 @@ export default function WalletPage() {
         {/* ── Balance Card ────────────────────────────────────── */}
         <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 glow">
           <p className="text-sm text-muted mb-1">Saldo Disponible</p>
-          <p className="text-4xl sm:text-5xl font-bold text-gradient tracking-tight">$185.50</p>
-          <p className="text-sm text-muted mt-2">Fondos en Garantia: $20.00</p>
+          <p className="text-4xl sm:text-5xl font-bold text-gradient tracking-tight">$0.00</p>
+          <p className="text-sm text-muted mt-2">Fondos en Garantia: $0.00</p>
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => setActiveTab("depositar")}

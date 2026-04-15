@@ -49,19 +49,19 @@ const IconGamepad = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="5"/></svg>
 );
 
-/* ── Data ─────────────────────────────────────────────────────── */
+/* ── Data (empty — real data comes from backend) ─────────────── */
 const stats = [
-  { label: "Victorias", value: "47", color: "text-success", icon: <IconTrophy /> },
-  { label: "Derrotas", value: "18", color: "text-red-500", icon: <IconTarget /> },
-  { label: "% Victorias", value: "72.3%", color: "text-blue-500", icon: <IconTrendUp /> },
-  { label: "Ganancias", value: "$842.50", color: "text-gradient", icon: <IconCoin /> },
+  { label: "Victorias", value: "0", color: "text-success", icon: <IconTrophy /> },
+  { label: "Derrotas", value: "0", color: "text-red-500", icon: <IconTarget /> },
+  { label: "% Victorias", value: "0%", color: "text-blue-500", icon: <IconTrendUp /> },
+  { label: "Ganancias", value: "$0.00", color: "text-gradient", icon: <IconCoin /> },
 ];
 
 const rankingBreakdown = [
-  { label: "Impacto", value: 88.2, weight: "50%", color: "from-red-500 to-red-400" },
-  { label: "Placement", value: 82.5, weight: "25%", color: "from-blue-500 to-blue-400" },
-  { label: "Consistencia", value: 91.0, weight: "15%", color: "from-green-500 to-green-400" },
-  { label: "Team Success", value: 78.4, weight: "10%", color: "from-purple-500 to-purple-400" },
+  { label: "Impacto", value: 0, weight: "50%", color: "from-red-500 to-red-400" },
+  { label: "Placement", value: 0, weight: "25%", color: "from-blue-500 to-blue-400" },
+  { label: "Consistencia", value: 0, weight: "15%", color: "from-green-500 to-green-400" },
+  { label: "Team Success", value: 0, weight: "10%", color: "from-purple-500 to-purple-400" },
 ];
 
 interface Match {
@@ -72,20 +72,9 @@ interface Match {
   premio: string;
 }
 
-const recentMatches: Match[] = [
-  { oponente: "ArrobaJota", modalidad: "1v1 Only Detri", monto: "$10.00", resultado: "Victoria", premio: "$18.00" },
-  { oponente: "NexusFire", modalidad: "1v1 All Skills", monto: "$20.00", resultado: "Victoria", premio: "$36.00" },
-  { oponente: "ShadowMX", modalidad: "1v1 Only Detri", monto: "$5.00", resultado: "Derrota", premio: "$0.00" },
-  { oponente: "TurboDrake", modalidad: "2v2 Mixto", monto: "$15.00", resultado: "Victoria", premio: "$27.00" },
-  { oponente: "PhantomKill", modalidad: "1v1 All Skills", monto: "$25.00", resultado: "Victoria", premio: "$45.00" },
-  { oponente: "VelocityX", modalidad: "1v1 Only Detri", monto: "$10.00", resultado: "Derrota", premio: "$0.00" },
-];
+const recentMatches: Match[] = [];
 
-const tournaments = [
-  { nombre: "Torneo Semanal #14", fecha: "20 Mar 2026", posicion: "1er Lugar", premio: "$150.00", participantes: 32 },
-  { nombre: "Copa LATAM Norte", fecha: "15 Mar 2026", posicion: "3er Lugar", premio: "$50.00", participantes: 64 },
-  { nombre: "Torneo Semanal #12", fecha: "6 Mar 2026", posicion: "2do Lugar", premio: "$75.00", participantes: 32 },
-];
+const tournaments: { nombre: string; fecha: string; posicion: string; premio: string; participantes: number }[] = [];
 
 /* ── Component ────────────────────────────────────────────────── */
 export default function PerfilPage() {
@@ -274,15 +263,15 @@ export default function PerfilPage() {
           </div>
           <div className="grid sm:grid-cols-3 gap-6 mb-8">
             <div className="text-center sm:text-left">
-              <p className="text-4xl sm:text-5xl font-bold text-gradient">87.4</p>
+              <p className="text-4xl sm:text-5xl font-bold text-gradient">--</p>
               <p className="text-sm text-muted mt-1">Score Final</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-foreground">#1</p>
+              <p className="text-3xl font-bold text-foreground">--</p>
               <p className="text-sm text-muted mt-1">Rank General</p>
             </div>
             <div className="text-center sm:text-right">
-              <p className="text-3xl font-bold text-blue-400">95.2%</p>
+              <p className="text-3xl font-bold text-blue-400">--</p>
               <p className="text-sm text-muted mt-1">Percentil</p>
             </div>
           </div>
@@ -331,6 +320,13 @@ export default function PerfilPage() {
 
         {/* ── Recent Matches Table ────────────────────────────── */}
         {activeSection === "partidas" ? (
+          recentMatches.length === 0 ? (
+            <div className="bg-surface border border-border rounded-2xl p-12 text-center">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted/40"><path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2" strokeLinecap="round" /><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2" strokeLinecap="round" /><path d="M6 3h12v7a6 6 0 0 1-12 0V3z" strokeLinecap="round" /><path d="M12 16v3" strokeLinecap="round" /><path d="M8 22h8" strokeLinecap="round" /></svg>
+              <h3 className="text-lg font-semibold mb-1">Sin partidas todavia</h3>
+              <p className="text-sm text-muted">Acepta o crea un reto para comenzar tu historial competitivo</p>
+            </div>
+          ) : (
           <div className="bg-surface border border-border rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -374,8 +370,16 @@ export default function PerfilPage() {
               </table>
             </div>
           </div>
+          )
         ) : (
           /* ── Tournament History ────────────────────────────── */
+          tournaments.length === 0 ? (
+            <div className="bg-surface border border-border rounded-2xl p-12 text-center">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted/40"><rect x="3" y="4" width="18" height="18" rx="2" strokeLinecap="round" /><line x1="16" y1="2" x2="16" y2="6" strokeLinecap="round" /><line x1="8" y1="2" x2="8" y2="6" strokeLinecap="round" /><line x1="3" y1="10" x2="21" y2="10" strokeLinecap="round" /></svg>
+              <h3 className="text-lg font-semibold mb-1">Sin torneos todavia</h3>
+              <p className="text-sm text-muted">Inscribete a un torneo para comenzar a competir</p>
+            </div>
+          ) : (
           <div className="grid gap-4">
             {tournaments.map((t, i) => (
               <div key={i} className="bg-surface border border-border rounded-2xl p-5 sm:p-6 card-hover">
@@ -401,6 +405,7 @@ export default function PerfilPage() {
               </div>
             ))}
           </div>
+          )
         )}
 
         {/* ── Activity Section ────────────────────────────────── */}
@@ -410,24 +415,24 @@ export default function PerfilPage() {
               <IconClock />
               <span className="text-xs font-medium uppercase tracking-wider">Ultimo acceso</span>
             </div>
-            <p className="font-semibold">Hace 2 horas</p>
-            <p className="text-xs text-muted mt-0.5">27 Mar 2026, 14:30</p>
+            <p className="font-semibold">Ahora</p>
+            <p className="text-xs text-muted mt-0.5">Sesion activa</p>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5 card-hover">
             <div className="flex items-center gap-2 text-muted mb-3">
               <IconGamepad />
               <span className="text-xs font-medium uppercase tracking-wider">Partidas del mes</span>
             </div>
-            <p className="font-semibold text-2xl">23</p>
-            <p className="text-xs text-muted mt-0.5">Promedio: 5.8 por semana</p>
+            <p className="font-semibold text-2xl">0</p>
+            <p className="text-xs text-muted mt-0.5">Juega tu primera partida</p>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5 card-hover">
             <div className="flex items-center gap-2 text-muted mb-3">
               <IconFlame />
               <span className="text-xs font-medium uppercase tracking-wider">Racha actual</span>
             </div>
-            <p className="font-semibold text-2xl text-success">5 Victorias</p>
-            <p className="text-xs text-muted mt-0.5">Mejor racha: 9 victorias</p>
+            <p className="font-semibold text-2xl text-muted">Sin racha</p>
+            <p className="text-xs text-muted mt-0.5">Compite para iniciar</p>
           </div>
         </div>
 

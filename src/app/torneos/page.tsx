@@ -85,80 +85,16 @@ function CheckCircleIcon({ className = "h-4 w-4" }: { className?: string }) {
 /* ───── Data ───── */
 type Tab = "activos" | "proximos" | "finalizados";
 
-const activeTournaments = [
-  {
-    id: 1,
-    name: "Copa Phoenix Semanal #12",
-    badge: "all" as const,
-    badgeLabel: "All Skills",
-    game: "FIFA 25",
-    format: "5v5 Eliminacion Directa",
-    teams: 16,
-    totalSlots: 16,
-    filledSlots: 16,
-    entryFee: 15,
-    prizePool: 200,
-    distribution: [50, 30, 20],
-    status: "en_curso" as const,
-    startDate: "En curso",
-  },
-  {
-    id: 2,
-    name: "Arena Nocturna",
-    badge: "detri" as const,
-    badgeLabel: "Detri",
-    game: "Call of Duty: Warzone",
-    format: "1v1 Eliminacion",
-    teams: 8,
-    totalSlots: 8,
-    filledSlots: 5,
-    entryFee: 10,
-    prizePool: 64,
-    distribution: [60, 25, 15],
-    status: "registro" as const,
-    startDate: "Hoy 9:00 PM",
-  },
-  {
-    id: 3,
-    name: "Duelo de Leyendas",
-    badge: "pro" as const,
-    badgeLabel: "Evento",
-    game: "Fortnite",
-    format: "1v1 Eliminacion Doble",
-    teams: 32,
-    totalSlots: 32,
-    filledSlots: 18,
-    entryFee: 25,
-    prizePool: 640,
-    distribution: [50, 25, 15, 10],
-    status: "registro" as const,
-    startDate: "Sabado 3:00 PM",
-  },
-];
+const activeTournaments: { id: number; name: string; badge: "all" | "pro" | "detri"; badgeLabel: string; game: string; format: string; teams: number; totalSlots: number; filledSlots: number; entryFee: number; prizePool: number; distribution: number[]; status: "en_curso" | "registro"; startDate: string }[] = [];
 
-const upcomingTournaments = [
-  { id: 4, name: "Liga Mensual Abril", game: "FIFA 25", format: "Liga 10 equipos", entryFee: 20, prizePool: 400, startDate: "1 Abr, 8:00 PM", slots: "2/10" },
-  { id: 5, name: "Torneo Relámpago", game: "Rocket League", format: "2v2 Eliminacion", entryFee: 5, prizePool: 40, startDate: "29 Mar, 6:00 PM", slots: "0/16" },
-  { id: 6, name: "Copa Nocturna Premium", game: "Valorant", format: "5v5 Eliminacion", entryFee: 30, prizePool: 480, startDate: "30 Mar, 10:00 PM", slots: "4/8" },
-];
+const upcomingTournaments: { id: number; name: string; game: string; format: string; entryFee: number; prizePool: number; startDate: string; slots: string }[] = [];
 
-const finishedTournaments = [
-  { id: 7, name: "Copa Phoenix Semanal #11", game: "FIFA 25", winner: "xDragon_Pro", prize: "$100", date: "20 Mar 2026", participants: 16 },
-  { id: 8, name: "Arena Nocturna #5", game: "Call of Duty: Warzone", winner: "NightHawk99", prize: "$38", date: "18 Mar 2026", participants: 8 },
-];
+const finishedTournaments: { id: number; name: string; game: string; winner: string; prize: string; date: string; participants: number }[] = [];
 
 const bracketData = {
-  round1: [
-    { a: "xDragon_Pro", b: "ShadowKing", winner: "a" },
-    { a: "NightHawk99", b: "BlazeFury", winner: "a" },
-    { a: "IceStorm", b: "ThunderBolt", winner: "b" },
-    { a: "PhoenixRise", b: "CobraKai", winner: "a" },
-  ],
-  round2: [
-    { a: "xDragon_Pro", b: "NightHawk99", winner: "a" },
-    { a: "ThunderBolt", b: "PhoenixRise", winner: "b" },
-  ],
-  final: { a: "xDragon_Pro", b: "PhoenixRise", winner: "a" },
+  round1: [] as { a: string; b: string; winner: string }[],
+  round2: [] as { a: string; b: string; winner: string }[],
+  final: null as { a: string; b: string; winner: string } | null,
 };
 
 const howItWorksSteps = [
@@ -351,6 +287,7 @@ export default function TorneosPage() {
                   </div>
 
                   {/* Final */}
+                  {bracketData.final && (
                   <div className="flex flex-col">
                     <p className="text-[10px] uppercase tracking-wider text-red-400 font-semibold mb-1">Final</p>
                     <BracketMatch a={bracketData.final.a} b={bracketData.final.b} winner={bracketData.final.winner} round="f" />
@@ -359,6 +296,7 @@ export default function TorneosPage() {
                       <span className="font-semibold">Campeon: {bracketData.final.winner === "a" ? bracketData.final.a : bracketData.final.b}</span>
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -127,73 +127,33 @@ const sidebarItems: { key: Section; label: string; icon: React.ReactNode }[] = [
 ];
 
 const metrics = [
-  { label: "Matches Hoy", value: "24", icon: <GamepadIcon className="h-5 w-5" />, color: "text-blue-400" },
-  { label: "Matches Semana", value: "156", icon: <BarChartIcon className="h-5 w-5" />, color: "text-foreground" },
-  { label: "Volumen Semanal", value: "$3,240", icon: <DollarIcon className="h-5 w-5" />, color: "text-success" },
-  { label: "Disputas Pendientes", value: "3", icon: <AlertCircleIcon className="h-5 w-5" />, color: "text-red-400", highlight: true },
-  { label: "Usuarios Activos", value: "342", icon: <UsersIcon className="h-5 w-5" />, color: "text-blue-400" },
-  { label: "Tasa Disputas", value: "2.1%", icon: <ShieldIcon className="h-5 w-5" />, color: "text-muted" },
+  { label: "Matches Hoy", value: "0", icon: <GamepadIcon className="h-5 w-5" />, color: "text-blue-400" },
+  { label: "Matches Semana", value: "0", icon: <BarChartIcon className="h-5 w-5" />, color: "text-foreground" },
+  { label: "Volumen Semanal", value: "$0", icon: <DollarIcon className="h-5 w-5" />, color: "text-success" },
+  { label: "Disputas Pendientes", value: "0", icon: <AlertCircleIcon className="h-5 w-5" />, color: "text-red-400", highlight: false },
+  { label: "Usuarios Activos", value: "0", icon: <UsersIcon className="h-5 w-5" />, color: "text-blue-400" },
+  { label: "Tasa Disputas", value: "0%", icon: <ShieldIcon className="h-5 w-5" />, color: "text-muted" },
 ];
 
 const dailyMatches = [
-  { day: "Lun", count: 18, max: 32 },
-  { day: "Mar", count: 22, max: 32 },
-  { day: "Mie", count: 28, max: 32 },
-  { day: "Jue", count: 32, max: 32 },
-  { day: "Vie", count: 26, max: 32 },
-  { day: "Sab", count: 20, max: 32 },
-  { day: "Dom", count: 24, max: 32 },
+  { day: "Lun", count: 0, max: 1 },
+  { day: "Mar", count: 0, max: 1 },
+  { day: "Mie", count: 0, max: 1 },
+  { day: "Jue", count: 0, max: 1 },
+  { day: "Vie", count: 0, max: 1 },
+  { day: "Sab", count: 0, max: 1 },
+  { day: "Dom", count: 0, max: 1 },
 ];
 
-const disputes = [
-  { id: 1230, playerA: "xDragon_Pro", playerB: "PhantomX", game: "Fortnite", amount: "$30", time: "Hace 2h", status: "pendiente" },
-  { id: 1228, playerA: "NightHawk99", playerB: "BlazeFury", game: "FIFA 25", amount: "$20", time: "Hace 4h", status: "pendiente" },
-  { id: 1225, playerA: "IceStorm", playerB: "CobraKai", game: "Warzone", amount: "$15", time: "Hace 6h", status: "en_revision" },
-  { id: 1222, playerA: "StarPlayer", playerB: "ThunderBolt", game: "Rocket League", amount: "$10", time: "Hace 8h", status: "pendiente" },
-];
+const disputes: { id: number; playerA: string; playerB: string; game: string; amount: string; time: string; status: string }[] = [];
 
-const transactions = [
-  { id: "TXN-4521", user: "xDragon_Pro", type: "Deposito", method: "PayPal", amount: "+$50.00", status: "Completada", date: "Hoy 3:15 PM" },
-  { id: "TXN-4520", user: "NightHawk99", type: "Retiro", method: "Transferencia", amount: "-$35.00", status: "Procesando", date: "Hoy 2:48 PM" },
-  { id: "TXN-4519", user: "PhantomX", type: "Premio", method: "Sistema", amount: "+$25.00", status: "Completada", date: "Hoy 2:30 PM" },
-  { id: "TXN-4518", user: "BlazeFury", type: "Entrada", method: "Wallet", amount: "-$15.00", status: "Completada", date: "Hoy 1:20 PM" },
-  { id: "TXN-4517", user: "IceStorm", type: "Deposito", method: "Tarjeta", amount: "+$100.00", status: "Completada", date: "Hoy 12:05 PM" },
-  { id: "TXN-4516", user: "CobraKai", type: "Retiro", method: "PayPal", amount: "-$45.00", status: "Fallida", date: "Hoy 11:30 AM" },
-  { id: "TXN-4515", user: "StarPlayer", type: "Entrada", method: "Wallet", amount: "-$20.00", status: "Completada", date: "Ayer 9:00 PM" },
-  { id: "TXN-4514", user: "ShadowHunter", type: "Premio", method: "Sistema", amount: "+$38.00", status: "Completada", date: "Ayer 8:45 PM" },
-  { id: "TXN-4513", user: "ThunderBolt", type: "Deposito", method: "PayPal", amount: "+$25.00", status: "Completada", date: "Ayer 7:15 PM" },
-  { id: "TXN-4512", user: "DarkMatter", type: "Retiro", method: "Transferencia", amount: "-$60.00", status: "Procesando", date: "Ayer 6:30 PM" },
-];
+const transactions: { id: string; user: string; type: string; method: string; amount: string; status: string; date: string }[] = [];
 
-const users = [
-  { id: 1, username: "xDragon_Pro", email: "dragon@email.com", tier: "Pro", balance: "$245", matches: 87, status: "Activo" as const, joined: "15 Ene 2026" },
-  { id: 2, username: "NightHawk99", email: "hawk@email.com", tier: "Amateur", balance: "$120", matches: 45, status: "Activo" as const, joined: "20 Feb 2026" },
-  { id: 3, username: "PhantomX", email: "phantom@email.com", tier: "Detri", balance: "$12", matches: 23, status: "Suspendido" as const, joined: "5 Mar 2026" },
-  { id: 4, username: "BlazeFury", email: "blaze@email.com", tier: "Amateur", balance: "$67", matches: 34, status: "Activo" as const, joined: "12 Ene 2026" },
-  { id: 5, username: "IceStorm", email: "ice@email.com", tier: "Pro", balance: "$310", matches: 112, status: "Activo" as const, joined: "3 Dic 2025" },
-  { id: 6, username: "CobraKai", email: "cobra@email.com", tier: "Amateur", balance: "$0", matches: 5, status: "Pendiente" as const, joined: "25 Mar 2026" },
-  { id: 7, username: "StarPlayer", email: "star@email.com", tier: "Pro", balance: "$189", matches: 76, status: "Activo" as const, joined: "8 Feb 2026" },
-  { id: 8, username: "DarkMatter", email: "dark@email.com", tier: "Detri", balance: "$33", matches: 15, status: "Activo" as const, joined: "1 Mar 2026" },
-];
+const users: { id: number; username: string; email: string; tier: string; balance: string; matches: number; status: "Activo" | "Suspendido" | "Pendiente"; joined: string }[] = [];
 
-const adminTournaments = [
-  { id: 1, name: "Copa Phoenix Semanal #12", status: "En Curso", participants: "16/16", prize: "$200", game: "FIFA 25" },
-  { id: 2, name: "Arena Nocturna", status: "Registro", participants: "5/8", prize: "$64", game: "Warzone" },
-  { id: 3, name: "Duelo de Leyendas", status: "Registro", participants: "18/32", prize: "$640", game: "Fortnite" },
-];
+const adminTournaments: { id: number; name: string; status: string; participants: string; prize: string; game: string }[] = [];
 
-const activityLog = [
-  { time: "3:25 PM", user: "ModeratorPX", action: "Disputa asignada", detail: "Reto #1230 - Fortnite", ip: "192.168.1.42" },
-  { time: "3:18 PM", user: "Sistema", action: "Disputa abierta", detail: "Reto #1230 - Ambos reportaron victoria", ip: "---" },
-  { time: "3:15 PM", user: "xDragon_Pro", action: "Resultado reportado", detail: "Reto #1230 - Victoria", ip: "187.45.12.88" },
-  { time: "2:48 PM", user: "NightHawk99", action: "Retiro solicitado", detail: "$35.00 via Transferencia", ip: "201.33.78.15" },
-  { time: "2:30 PM", user: "Sistema", action: "Premio depositado", detail: "$25.00 a PhantomX", ip: "---" },
-  { time: "2:15 PM", user: "Admin", action: "Usuario suspendido", detail: "PhantomX - Evidencia fraudulenta", ip: "10.0.0.1" },
-  { time: "1:20 PM", user: "BlazeFury", action: "Inscripcion torneo", detail: "Arena Nocturna - $15", ip: "189.67.23.44" },
-  { time: "12:05 PM", user: "IceStorm", action: "Deposito completado", detail: "$100.00 via Tarjeta", ip: "177.90.45.12" },
-  { time: "11:30 AM", user: "Sistema", action: "Retiro fallido", detail: "CobraKai - PayPal rechazado", ip: "---" },
-  { time: "10:00 AM", user: "Admin", action: "Torneo creado", detail: "Duelo de Leyendas - $640 pool", ip: "10.0.0.1" },
-];
+const activityLog: { time: string; user: string; action: string; detail: string; ip: string }[] = [];
 
 /* ───── Helpers ───── */
 function txStatusColor(status: string) {

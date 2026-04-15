@@ -79,31 +79,15 @@ interface Player {
   percentil: number;
 }
 
-const players: Player[] = [
-  { rank: 1, nombre: "GeroBeta", tier: "PRO", participaciones: 42, impacto: 88.2, placement: 82.5, consistencia: 91.0, teamSuccess: 78.4, scoreFinal: 87.4, percentil: 95.2 },
-  { rank: 2, nombre: "ArrobaJota", tier: "PRO", participaciones: 38, impacto: 85.1, placement: 84.0, consistencia: 87.3, teamSuccess: 80.2, scoreFinal: 85.1, percentil: 93.8 },
-  { rank: 3, nombre: "NexusFire", tier: "PRO", participaciones: 35, impacto: 82.6, placement: 80.1, consistencia: 85.7, teamSuccess: 82.0, scoreFinal: 82.5, percentil: 91.0 },
-  { rank: 4, nombre: "Juancho", tier: "PRO", participaciones: 40, impacto: 80.4, placement: 78.2, consistencia: 83.1, teamSuccess: 75.8, scoreFinal: 79.8, percentil: 88.5 },
-  { rank: 5, nombre: "ShadowMX", tier: "PRO", participaciones: 33, impacto: 78.9, placement: 76.5, consistencia: 80.2, teamSuccess: 77.1, scoreFinal: 78.2, percentil: 86.1 },
-  { rank: 6, nombre: "TurboDrake", tier: "AM", participaciones: 28, impacto: 72.3, placement: 68.4, consistencia: 74.1, teamSuccess: 70.5, scoreFinal: 71.2, percentil: 75.3 },
-  { rank: 7, nombre: "PhantomKill", tier: "AM", participaciones: 30, impacto: 70.1, placement: 66.8, consistencia: 72.5, teamSuccess: 68.2, scoreFinal: 69.5, percentil: 72.1 },
-  { rank: 8, nombre: "VelocityX", tier: "AM", participaciones: 25, impacto: 68.4, placement: 64.2, consistencia: 70.8, teamSuccess: 65.1, scoreFinal: 67.3, percentil: 68.5 },
-  { rank: 9, nombre: "StormRider", tier: "AM", participaciones: 22, impacto: 65.2, placement: 62.1, consistencia: 68.3, teamSuccess: 63.7, scoreFinal: 64.5, percentil: 64.0 },
-  { rank: 10, nombre: "AceMexico", tier: "AM", participaciones: 20, impacto: 60.8, placement: 58.3, consistencia: 64.2, teamSuccess: 60.1, scoreFinal: 60.5, percentil: 56.2 },
-  { rank: 11, nombre: "BlitzGamer", tier: "AM", participaciones: 18, impacto: 55.4, placement: 52.7, consistencia: 58.1, teamSuccess: 54.8, scoreFinal: 55.0, percentil: 48.3 },
-  { rank: 12, nombre: "NovaPulse", tier: "Detri", participaciones: 15, impacto: 42.3, placement: 38.5, consistencia: 45.1, teamSuccess: 40.2, scoreFinal: 41.5, percentil: 35.8 },
-  { rank: 13, nombre: "ThunderCR", tier: "Detri", participaciones: 12, impacto: 38.7, placement: 35.2, consistencia: 40.8, teamSuccess: 36.4, scoreFinal: 37.8, percentil: 28.4 },
-  { rank: 14, nombre: "ViperLATAM", tier: "Detri", participaciones: 10, impacto: 32.1, placement: 30.4, consistencia: 35.2, teamSuccess: 28.8, scoreFinal: 31.8, percentil: 20.1 },
-  { rank: 15, nombre: "CometRush", tier: "Detri", participaciones: 8, impacto: 28.5, placement: 25.1, consistencia: 30.4, teamSuccess: 25.2, scoreFinal: 27.5, percentil: 12.6 },
-];
+const players: Player[] = [];
 
 const dashboardStats = [
-  { label: "Jugadores Unicos", value: "156", icon: <IconUsers />, color: "text-foreground" },
-  { label: "Elegibles", value: "89", icon: <IconStar />, color: "text-blue-400" },
-  { label: "PRO", value: "18", icon: <IconAward />, color: "text-red-400" },
-  { label: "AM", value: "36", icon: <IconBarChart />, color: "text-blue-500" },
-  { label: "Detri", value: "35", icon: <IconTrendUp />, color: "text-muted" },
-  { label: "Registros", value: "2,450", icon: <IconDatabase />, color: "text-foreground" },
+  { label: "Jugadores Unicos", value: "0", icon: <IconUsers />, color: "text-foreground" },
+  { label: "Elegibles", value: "0", icon: <IconStar />, color: "text-blue-400" },
+  { label: "PRO", value: "0", icon: <IconAward />, color: "text-red-400" },
+  { label: "AM", value: "0", icon: <IconBarChart />, color: "text-blue-500" },
+  { label: "Detri", value: "0", icon: <IconTrendUp />, color: "text-muted" },
+  { label: "Registros", value: "0", icon: <IconDatabase />, color: "text-foreground" },
 ];
 
 const lsfTable = [
