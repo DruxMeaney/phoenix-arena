@@ -33,6 +33,11 @@ model User {
   disputesAsResolved Dispute[]            @relation("DisputeResolver")
   tournamentEntries  TournamentEntry[]
   matchRecords       RankingMatchRecord[]
+  xp                 Int      @default(0)
+  seasonXp           Int      @default(0)
+  vaultItems         VaultItem[]
+  feedEvents         FeedEvent[]
+  purchases          Purchase[]
 }
 
 // ── Wallet ───────────────────────────────────────────────────────
@@ -173,4 +178,72 @@ model RankingMatchRecord {
   bestTeamPointsInTournament Float    @default(0)
 
   player                     User     @relation(fields: [playerId], references: [id])
+}
+
+// ── Pulse Feed (Activity Timeline) ───────────────────────────────
+model FeedEvent {
+  id          String   @id @default(cuid())
+  userId      String?
+  type        String   // match_win, match_loss, tournament_join, tournament_win, deposit, level_up, achievement, system
+  title       String
+  description String
+  metadata    String?  // JSON string for extra data
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+}
+
+// ── Phoenix Vault (Player Inventory) ─────────────────────────────
+model VaultItem {
+  id          String   @id @default(cuid())
+  userId      String
+  itemType    String   // credit_pack, name_change, record_reset, badge, title
+  itemName    String
+  quantity    Int      @default(1)
+  used        Boolean  @default(false)
+  usedAt      DateTime?
+  acquiredAt  DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+// ── Store Purchases ──────────────────────────────────────────────
+model Purchase {
+  id          String   @id @default(cuid())
+  userId      String
+  itemType    String
+  itemName    String
+  price       Float
+  credits     Int      @default(0) // credits granted (for credit packs)
+  status      String   @default("completed")
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+// ── Arena Ladder (Weekly XP Leaderboard) ─────────────────────────
+model LadderSeason {
+  id          String   @id @default(cuid())
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("active") // active, finished
+  prizePool   Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  entries     LadderEntry[]
+}
+
+model LadderEntry {
+  id          String   @id @default(cuid())
+  seasonId    String
+  userId      String
+  xp          Int      @default(0)
+  matchesPlayed Int    @default(0)
+  wins        Int      @default(0)
+  rank        Int?
+
+  season      LadderSeason @relation(fields: [seasonId], references: [id])
+
+  @@unique([seasonId, userId])
 }

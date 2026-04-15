@@ -6,10 +6,13 @@ import { useState, useEffect } from "react";
 
 const navLinks = [
   { href: "/", label: "Inicio" },
+  { href: "/quickmatch", label: "QuickMatch" },
   { href: "/retos", label: "Retos" },
+  { href: "/ladder", label: "Ladder" },
   { href: "/torneos", label: "Torneos" },
   { href: "/ranking", label: "Ranking" },
-  { href: "/como-funciona", label: "Como Funciona" },
+  { href: "/tienda", label: "Tienda" },
+  { href: "/pulso", label: "Pulso" },
 ];
 
 function PhoenixLogo({ className = "h-8 w-8" }: { className?: string }) {
@@ -151,6 +154,10 @@ export function Navbar() {
                   <Link href="/wallet" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
                     Monedero
+                  </Link>
+                  <Link href="/boveda" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>
+                    Mi Boveda
                   </Link>
                   <Link href="/resultados" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
