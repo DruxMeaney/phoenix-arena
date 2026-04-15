@@ -126,8 +126,11 @@ export default function RankingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
         {/* ── Header ──────────────────────────────────────────── */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gradient">Ranking Phoenix Arena</h1>
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gradient">Ranking Phoenix Arena</h1>
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/30">Fase 1</span>
+          </div>
           <p className="text-muted max-w-2xl mx-auto">
             Sistema competitivo basado en desempeno real. Cada metrica refleja tu nivel de juego.
           </p>
@@ -398,7 +401,13 @@ export default function RankingPage() {
                 <span className="text-foreground"> = </span>
                 <span className="text-muted">BaseScore</span>
                 <span className="text-foreground"> x </span>
-                <span className="text-red-400 font-bold">Factor LSF</span>
+                <span className="text-red-400 font-bold">LSF</span>
+                <span className="text-foreground"> x </span>
+                <span className="text-blue-400 font-bold">LobbyStrength</span>
+                <span className="text-foreground"> x </span>
+                <span className="text-green-400 font-bold">ColdStart</span>
+                <span className="text-foreground"> x </span>
+                <span className="text-purple-400 font-bold">Decay</span>
               </div>
             </div>
           </div>
@@ -519,6 +528,92 @@ export default function RankingPage() {
               <div className="mt-4 pt-3 border-t border-border">
                 <p className="text-xs text-muted">Minimo 4 participaciones para calificar</p>
               </div>
+            </div>
+          </div>
+
+          {/* ── v2 Advanced Factors ──────────────────────────────── */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-center">Factores Avanzados del Motor de Scoring</h3>
+            <p className="text-sm text-muted text-center max-w-xl mx-auto">
+              Ademas de la formula base, el sistema aplica ajustes inteligentes para garantizar que el ranking refleje la realidad competitiva.
+            </p>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {/* Decay */}
+              <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-yellow-500/10">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <h4 className="font-semibold">Decaimiento Temporal</h4>
+                </div>
+                <p className="text-sm text-muted leading-relaxed mb-3">
+                  Los jugadores inactivos pierden un 5% de su score cada mes despues de 30 dias sin competir. El score nunca cae por debajo del 60% de tu mejor marca historica.
+                </p>
+                <div className="bg-surface-2 rounded-lg p-3 font-mono text-xs space-y-1">
+                  <p><span className="text-muted">Tasa:</span> <span className="text-yellow-400">5% mensual</span></p>
+                  <p><span className="text-muted">Umbral:</span> <span className="text-foreground">30 dias sin actividad</span></p>
+                  <p><span className="text-muted">Piso:</span> <span className="text-foreground">60% del peak score</span></p>
+                </div>
+              </div>
+
+              {/* Lobby Strength */}
+              <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
+                  <h4 className="font-semibold">Fortaleza del Lobby</h4>
+                </div>
+                <p className="text-sm text-muted leading-relaxed mb-3">
+                  Ganar en un lobby lleno de jugadores PRO vale mas que ganar contra principiantes. El sistema calcula la calidad promedio de cada lobby y ajusta los puntos de placement proporcionalmente.
+                </p>
+                <div className="bg-surface-2 rounded-lg p-3 font-mono text-xs space-y-1">
+                  <p><span className="text-muted">Formula:</span> <span className="text-blue-400">mean(scores lobby) / mean global</span></p>
+                  <p><span className="text-muted">Rango:</span> <span className="text-foreground">x0.5 a x2.0</span></p>
+                  <p><span className="text-muted">Aplica a:</span> <span className="text-foreground">Componente Placement</span></p>
+                </div>
+              </div>
+
+              {/* Cold Start */}
+              <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                  </div>
+                  <h4 className="font-semibold">Arranque en Frio</h4>
+                </div>
+                <p className="text-sm text-muted leading-relaxed mb-3">
+                  Los jugadores nuevos arrancan con un score mezclado con el promedio de la poblacion (prior bayesiano). Esto evita que una sola partida excepcional o desastrosa defina tu clasificacion.
+                </p>
+                <div className="bg-surface-2 rounded-lg p-3 font-mono text-xs space-y-1">
+                  <p><span className="text-muted">Metodo:</span> <span className="text-green-400">Prior Bayesiano (k=4)</span></p>
+                  <p><span className="text-muted">Calibracion:</span> <span className="text-foreground">Primeras 4 partidas</span></p>
+                  <p><span className="text-muted">Efecto:</span> <span className="text-foreground">Score se estabiliza gradualmente</span></p>
+                </div>
+              </div>
+            </div>
+
+            {/* Weighted Recency note */}
+            <div className="bg-surface border border-border rounded-2xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-1">Recencia Ponderada en Consistencia</h4>
+                  <p className="text-sm text-muted leading-relaxed">
+                    El componente de consistencia no penaliza a jugadores que mejoran genuinamente. Las partidas recientes pesan mas que las antiguas (factor exponencial 0.9), permitiendo que una mejora real se refleje rapidamente en tu score sin arrastrar resultados viejos.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Novice exclusion note */}
+            <div className="bg-surface border border-yellow-500/20 rounded-2xl p-5 flex items-start gap-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <p className="text-sm text-muted">
+                <span className="text-foreground font-medium">Los torneos Novice estan excluidos del ranking principal.</span> Sirven como calibracion inicial para nuevos jugadores, pero no afectan la clasificacion competitiva.
+              </p>
             </div>
           </div>
 

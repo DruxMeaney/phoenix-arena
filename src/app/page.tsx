@@ -211,18 +211,12 @@ const trustCards = [
   },
 ];
 
-const rankingData = [
-  { pos: 1, name: "GeroBeta", tier: "PRO", score: 87.4, wins: 142, matches: 163 },
-  { pos: 2, name: "ArrobaJota", tier: "PRO", score: 82.1, wins: 128, matches: 156 },
-  { pos: 3, name: "Juancho", tier: "AM", score: 65.2, wins: 89, matches: 137 },
-  { pos: 4, name: "NexusFire", tier: "AM", score: 58.7, wins: 74, matches: 126 },
-  { pos: 5, name: "ZetaKill", tier: "Detri", score: 34.5, wins: 41, matches: 119 },
-];
+const rankingData: { pos: number; name: string; tier: string; score: number; wins: number; matches: number }[] = [];
 
 const tiers = [
-  { name: "PRO", badge: "badge-pro", range: "75 — 100", desc: "Jugadores de elite con rendimiento excepcional y consistencia demostrada." },
-  { name: "AM", badge: "badge-am", range: "40 — 74.9", desc: "Competidores solidos en camino a la cima. Gran potencial de crecimiento." },
-  { name: "Detri", badge: "badge-detri", range: "0 — 39.9", desc: "Nuevos jugadores o en racha negativa. Cada victoria cuenta para escalar." },
+  { name: "PRO", badge: "badge-pro", range: "Percentil ≥ 80", desc: "Jugadores de elite con rendimiento excepcional y consistencia demostrada." },
+  { name: "AM", badge: "badge-am", range: "Percentil ≥ 40", desc: "Competidores solidos en camino a la cima. Gran potencial de crecimiento." },
+  { name: "Detri", badge: "badge-detri", range: "Percentil < 40", desc: "Nuevos jugadores o en racha negativa. Cada victoria cuenta para escalar." },
 ];
 
 const tournaments = [

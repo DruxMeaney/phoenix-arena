@@ -135,7 +135,14 @@ export default function PerfilPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl sm:text-3xl font-bold">{displayName}</h1>
-                <span className="badge-pro px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">PRO</span>
+                <span className="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Calibrando
+                </span>
+                <span className="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-success/15 text-success border border-success/30 flex items-center gap-1.5">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Activo
+                </span>
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-muted">
                 <span>Game ID: <span className="text-foreground font-mono">#PA-00142</span></span>
@@ -242,6 +249,19 @@ export default function PerfilPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ── Calibration Banner ─────────────────────────────── */}
+        <div className="bg-blue-500/10 border border-blue-500/25 rounded-2xl p-5 flex items-start gap-4">
+          <div className="p-2 rounded-lg bg-blue-500/15 shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-blue-400 mb-1">Periodo de calibracion</h3>
+            <p className="text-xs text-muted leading-relaxed">
+              Tu score esta en proceso de calibracion. Necesitas un minimo de 4 partidas competitivas para que tu clasificacion se estabilice. Mientras tanto, tu score se mezcla con el promedio de la plataforma para evitar clasificaciones prematuras.
+            </p>
+          </div>
         </div>
 
         {/* ── Stats Grid ──────────────────────────────────────── */}
