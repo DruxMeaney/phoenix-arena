@@ -31,6 +31,7 @@ model User {
   status        String   @default("active")
   tier          String   @default("Detri")
   peakScore     Float    @default(0)
+  lastSeen      DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -83,7 +83,7 @@ function CheckCircleIcon({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 /* ───── Data ───── */
-type Tab = "activos" | "proximos" | "finalizados";
+type Tab = "activos" | "proximos" | "finalizados" | "rapida";
 
 const activeTournaments: { id: number; name: string; badge: "all" | "pro" | "detri"; badgeLabel: string; game: string; format: string; teams: number; totalSlots: number; filledSlots: number; entryFee: number; prizePool: number; distribution: number[]; status: "en_curso" | "registro"; startDate: string }[] = [];
 
@@ -200,9 +200,25 @@ function TournamentCard({ t }: { t: typeof activeTournaments[0] }) {
 
 /* ───── Page ───── */
 export default function TorneosPage() {
-  const [tab, setTab] = useState<Tab>("activos");
+  const [tab, setTab] = useState<Tab>("rapida");
+
+  const [qmAmount, setQmAmount] = useState(10);
+  const [qmSearching, setQmSearching] = useState(false);
+  const [qmResult, setQmResult] = useState<{ matched: boolean; opponent?: string; amount?: number; message: string } | null>(null);
+
+  const handleQuickMatch = async () => {
+    setQmSearching(true);
+    setQmResult(null);
+    try {
+      const res = await fetch("/api/quickmatch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: qmAmount, game: "Warzone" }) });
+      const data = await res.json();
+      setQmResult(res.ok ? data : { matched: false, message: data.error || "Error" });
+    } catch { setQmResult({ matched: false, message: "Error de conexion" }); }
+    setQmSearching(false);
+  };
 
   const tabs: { key: Tab; label: string }[] = [
+    { key: "rapida", label: "Partida Rapida" },
     { key: "activos", label: "Activos" },
     { key: "proximos", label: "Proximos" },
     { key: "finalizados", label: "Finalizados" },
@@ -238,6 +254,48 @@ export default function TorneosPage() {
             </button>
           ))}
         </div>
+
+        {/* Partida Rapida tab */}
+        {tab === "rapida" && (
+          <div className="max-w-md mx-auto space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-main mx-auto flex items-center justify-center shadow-lg mb-4" style={{ boxShadow: "0 0 30px rgba(220,38,38,0.3)" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </div>
+              <h2 className="text-xl font-bold">Partida Rapida</h2>
+              <p className="text-sm text-muted mt-1">Emparejamiento 1v1 instantaneo contra un rival de tu nivel</p>
+            </div>
+
+            <div className="bg-surface/40 backdrop-blur-sm border border-border rounded-2xl p-6 space-y-5">
+              <div>
+                <label className="text-xs font-medium text-muted uppercase tracking-wider">Monto</label>
+                <div className="grid grid-cols-4 gap-3 mt-2">
+                  {[5, 10, 20, 50].map((amt) => (
+                    <button key={amt} onClick={() => setQmAmount(amt)} className={`py-3 rounded-xl font-bold text-lg transition-all ${qmAmount === amt ? "bg-gradient-main text-white shadow-lg" : "bg-surface-2 border border-border text-foreground hover:border-red-500/50"}`}>
+                      ${amt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-surface-2 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted">Modalidad</span><span className="font-medium">1v1 Warzone</span></div>
+                <div className="flex justify-between"><span className="text-muted">Premio</span><span className="text-success font-medium">${(qmAmount * 2 * 0.9).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted">Comision</span><span>10%</span></div>
+              </div>
+              <p className="text-xs text-muted">El sistema busca un rival de tu tier con monto similar. +5 XP por partida.</p>
+              <button onClick={handleQuickMatch} disabled={qmSearching} className="w-full py-4 rounded-xl bg-gradient-main text-white font-bold text-lg hover:opacity-90 disabled:opacity-50 shadow-lg">
+                {qmSearching ? "Buscando rival..." : "Buscar Partida"}
+              </button>
+            </div>
+
+            {qmResult && (
+              <div className={`rounded-2xl p-5 text-center ${qmResult.matched ? "bg-success/10 border border-success/30" : "bg-blue-500/10 border border-blue-500/30"}`}>
+                <h3 className={`font-bold mb-1 ${qmResult.matched ? "text-success" : "text-blue-400"}`}>{qmResult.matched ? "Rival encontrado" : "En cola"}</h3>
+                <p className="text-sm text-muted">{qmResult.matched ? `vs ${qmResult.opponent} por $${qmResult.amount}` : qmResult.message}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Active tab */}
         {tab === "activos" && (

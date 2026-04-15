@@ -6,11 +6,11 @@ import { useState, useEffect } from "react";
 
 const navLinks = [
   { href: "/", label: "Inicio" },
-  { href: "/quickmatch", label: "QuickMatch" },
   { href: "/retos", label: "Retos" },
-  { href: "/ladder", label: "Ladder" },
   { href: "/torneos", label: "Torneos" },
+  { href: "/ladder", label: "Ladder" },
   { href: "/ranking", label: "Ranking" },
+  { href: "/comunidad", label: "Comunidad" },
   { href: "/tienda", label: "Tienda" },
   { href: "/pulso", label: "Pulso" },
 ];
