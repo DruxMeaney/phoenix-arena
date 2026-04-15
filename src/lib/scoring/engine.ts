@@ -11,15 +11,44 @@ import { applyColdStartPrior } from "./coldstart";
 import { computeWeightedConsistency } from "./recency";
 import { computePercentiles } from "./percentile";
 
+/* ── Placement Points Lookup (from Project Brief) ────────────────── */
+const PLACEMENT_POINTS: Record<number, number> = {
+  1: 100, 2: 80, 3: 70, 4: 60, 5: 50,
+  6: 40, 7: 30, 8: 20, 9: 10, 10: 10,
+  11: 10, 12: 10, 13: 10, 14: 10, 15: 10, 16: 10,
+};
+
+function getPlacementPoints(position: number): number {
+  return PLACEMENT_POINTS[position] ?? 10;
+}
+
+/** Log-transform for kills — diminishing returns (from ML Feedback).
+ *  kills_score = log(1 + kills) * K
+ *  This means 0->1 kills is more valuable than 10->11. */
+function killsScoreLog(kills: number, k: number = 10): number {
+  return Math.log(1 + kills) * k * 10; // scaled to be comparable with linear
+}
+
+/** Rolling window — only use last N matches (from ML Feedback / Project Brief). */
+function applyRollingWindow<T>(matches: T[], windowSize: number = 20): T[] {
+  if (matches.length <= windowSize) return matches;
+  return matches.slice(-windowSize);
+}
+
 /* ── Phase 1: Simple Score ─────────────────────────────────────── */
 
-/** Simple scoring formula for MVP validation (Week 1-2). */
+/** Simple scoring formula for MVP validation (Week 1-2).
+ *  Uses placement points table from Project Brief. */
 export function computeSimpleScore(match: MatchRecord): number {
   const killsScore = match.kills * 10;
-  const placementScore =
-    match.totalTeams > 1
-      ? (1 - (match.position - 1) / match.totalTeams) * 100
-      : 50;
+  const placementScore = getPlacementPoints(match.position);
+  return killsScore + placementScore;
+}
+
+/** V2 scoring with log-transform (diminishing returns on kills). */
+export function computeSimpleScoreV2(match: MatchRecord): number {
+  const killsScore = killsScoreLog(match.kills);
+  const placementScore = getPlacementPoints(match.position);
   return killsScore + placementScore;
 }
 
@@ -128,10 +157,12 @@ export function computePlayerScore(
   populationData: PopulationData,
   currentDate: Date
 ): Omit<PlayerScore, "rank" | "percentil" | "tier"> {
-  const rankableMatches = player.matches.filter(
+  const allRankable = player.matches.filter(
     (m) => m.tournamentType !== "novice"
   );
-  const matchCount = rankableMatches.length;
+  // Apply rolling window — only last 20 matches for scoring (Project Brief + ML Feedback)
+  const rankableMatches = applyRollingWindow(allRankable, 20);
+  const matchCount = allRankable.length; // total for eligibility, window for scoring
 
   let impacto = 0;
   let placement = 0;

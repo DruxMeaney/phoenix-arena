@@ -25,3 +25,5 @@ export { computeLobbyStrength, adjustPlacementByLobbyStrength } from "./lobby";
 export { applyColdStartPrior } from "./coldstart";
 export { computeWeightedConsistency } from "./recency";
 export { computePercentiles, assignTier } from "./percentile";
+export { computeTrustScore, detectAnomaly, estimateCustomKD } from "./trust";
+export type { TrustInput, TrustResult } from "./trust";

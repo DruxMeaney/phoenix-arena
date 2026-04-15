@@ -31,6 +31,9 @@ model User {
   status        String   @default("active")
   tier          String   @default("Detri")
   peakScore     Float    @default(0)
+  trustScore    Float    @default(0)
+  trustLevel    String   @default("restricted") // restricted, monitored, full, verified
+  isFlagged     Boolean  @default(false)
   lastSeen      DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

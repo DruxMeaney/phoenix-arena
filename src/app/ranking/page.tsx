@@ -617,6 +617,109 @@ export default function RankingPage() {
             </div>
           </div>
 
+          {/* ── Trust Score Section ────────────────────────────── */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-center">Trust Score (Anti-Smurf)</h3>
+            <p className="text-sm text-muted text-center max-w-xl mx-auto">
+              Sistema de confianza que previene suplantacion de identidad, cuentas prestadas y smurfing (pros jugando en categorias bajas).
+            </p>
+
+            <div className="bg-surface border border-border rounded-2xl p-6">
+              <h4 className="font-semibold mb-3">Variables del Trust Score</h4>
+              <div className="grid sm:grid-cols-5 gap-3 mb-5">
+                {[
+                  { label: "Antiguedad", weight: "20%", color: "text-blue-400" },
+                  { label: "Torneos", weight: "25%", color: "text-purple-400" },
+                  { label: "Consistencia", weight: "25%", color: "text-green-400" },
+                  { label: "Cuentas vinculadas", weight: "15%", color: "text-yellow-400" },
+                  { label: "Historial limpio", weight: "15%", color: "text-red-400" },
+                ].map((v) => (
+                  <div key={v.label} className="bg-surface-2 rounded-xl p-3 text-center">
+                    <p className={`text-lg font-bold ${v.color}`}>{v.weight}</p>
+                    <p className="text-[10px] text-muted mt-1">{v.label}</p>
+                  </div>
+                ))}
+              </div>
+              <h4 className="font-semibold mb-2">Reglas de acceso</h4>
+              <div className="space-y-2">
+                {[
+                  { range: "< 30", label: "Solo puede jugar Amateur", color: "text-red-400", bg: "bg-red-500/10" },
+                  { range: "30 — 60", label: "Amateur + Detri con monitoreo", color: "text-yellow-400", bg: "bg-yellow-500/10" },
+                  { range: "> 60", label: "Acceso completo a todos los torneos", color: "text-blue-400", bg: "bg-blue-500/10" },
+                  { range: "> 80", label: "Badge 'Verificado' — jugador confiable", color: "text-success", bg: "bg-success/10" },
+                ].map((r) => (
+                  <div key={r.range} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg ${r.bg}`}>
+                    <span className={`font-mono font-bold text-sm w-16 ${r.color}`}>{r.range}</span>
+                    <span className="text-sm text-muted">{r.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Placement Points Table ─────────────────────────── */}
+          <div className="bg-surface border border-border rounded-2xl p-6">
+            <h4 className="font-semibold mb-3">Tabla de Puntos por Posicion</h4>
+            <p className="text-xs text-muted mb-4">Cada posicion en el torneo otorga una cantidad fija de puntos que se suma al score de kills.</p>
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+              {[
+                { pos: "1ro", pts: 100 }, { pos: "2do", pts: 80 }, { pos: "3ro", pts: 70 }, { pos: "4to", pts: 60 },
+                { pos: "5to", pts: 50 }, { pos: "6to", pts: 40 }, { pos: "7mo", pts: 30 }, { pos: "8vo", pts: 20 },
+              ].map((p) => (
+                <div key={p.pos} className="bg-surface-2 rounded-lg p-2.5 text-center">
+                  <p className="text-xs text-muted">{p.pos}</p>
+                  <p className="text-sm font-bold text-foreground">{p.pts}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted mt-2">Posiciones 9-16: 10 puntos cada una</p>
+          </div>
+
+          {/* ── Fragger vs Anchor Balance ──────────────────────── */}
+          <div className="bg-surface border border-border rounded-2xl p-6">
+            <h4 className="font-semibold mb-3">Balance de Roles: Fragger vs Anchor</h4>
+            <p className="text-xs text-muted mb-4">El sistema pondera ambas variables para no favorecer un estilo sobre otro.</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
+                <h5 className="font-semibold text-red-400 text-sm mb-2">Fragger</h5>
+                <p className="text-xs text-muted leading-relaxed">Alto numero de kills, placement inconsistente. Si solo se ponderaran kills, este perfil dominaria injustamente.</p>
+              </div>
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+                <h5 className="font-semibold text-blue-400 text-sm mb-2">Anchor</h5>
+                <p className="text-xs text-muted leading-relaxed">Pocas kills, placement muy consistente (top 3). Seria subvalorado si solo se ponderara el placement.</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted mt-3">La formula combina ambas metricas para que un Fragger con 10 kills + 5to lugar (150 pts) y un Anchor con 5 kills + 1er lugar (150 pts) tengan el mismo valor base.</p>
+          </div>
+
+          {/* ── Scoring Phases ─────────────────────────────────── */}
+          <div className="bg-surface border border-border rounded-2xl p-6">
+            <h4 className="font-semibold mb-3">Fases de Implementacion</h4>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success border border-success/30 shrink-0 mt-0.5">Fase 1</span>
+                <div>
+                  <p className="text-sm font-medium">Formula simple (actual)</p>
+                  <p className="text-xs text-muted">Score = Kills x 10 + Puntos Placement. Promedio de ultimas 20 partidas. Clasificacion por percentil.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 shrink-0 mt-0.5">Fase 2</span>
+                <div>
+                  <p className="text-sm font-medium">Scoring completo</p>
+                  <p className="text-xs text-muted">Consistencia + decay temporal + peso de lobby + diminishing returns en kills (log-transform).</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">Fase 3</span>
+                <div>
+                  <p className="text-sm font-medium">ML supervisado</p>
+                  <p className="text-xs text-muted">Modelo entrenado con clasificaciones de expertos. El algoritmo aprende los pesos optimos automaticamente.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
