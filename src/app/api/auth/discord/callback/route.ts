@@ -121,10 +121,12 @@ export async function GET(request: NextRequest) {
   /* ── Set session cookie & redirect ───────────────────────── */
   const response = NextResponse.redirect(`${baseUrl}/perfil`);
 
+  const thirtyDays = 30 * 24 * 60 * 60; // 30 days in seconds
+
   response.cookies.set("phoenix_session", JSON.stringify(sessionPayload), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    maxAge: tokenData.expires_in,
+    maxAge: thirtyDays,
     sameSite: "lax",
     path: "/",
   });
@@ -140,7 +142,7 @@ export async function GET(request: NextRequest) {
     {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
-      maxAge: tokenData.expires_in,
+      maxAge: thirtyDays,
       sameSite: "lax",
       path: "/",
     }
