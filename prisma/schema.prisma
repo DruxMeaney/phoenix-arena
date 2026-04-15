@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ── Users ────────────────────────────────────────────────────────
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String?  @unique
+  passwordHash  String?
+  avatar        String?
+  region        String   @default("latam-norte")
+  activisionId  String?
+  platform      String   @default("uno")
+  discordId     String?  @unique
+  role          String   @default("player")
+  status        String   @default("active")
+  tier          String   @default("Detri")
+  peakScore     Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  wallet             Wallet?
+  createdChallenges  Match[]              @relation("MatchCreator")
+  participations     MatchParticipant[]
+  reportedResults    Result[]
+  disputesAsReporter Dispute[]            @relation("DisputeReporter")
+  disputesAsResolved Dispute[]            @relation("DisputeResolver")
+  tournamentEntries  TournamentEntry[]
+  matchRecords       RankingMatchRecord[]
+}
+
+// ── Wallet ───────────────────────────────────────────────────────
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  balance      Float    @default(0)
+  heldBalance  Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  type        String
+  amount      Float
+  description String
+  status      String   @default("completed")
+  reference   String?
+  createdAt   DateTime @default(now())
+
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+}
+
+// ── Matches (Retos) ──────────────────────────────────────────────
+model Match {
+  id          String   @id @default(cuid())
+  creatorId   String
+  game        String   @default("Warzone")
+  modalidad   String
+  amount      Float
+  rules       String
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator      User               @relation("MatchCreator", fields: [creatorId], references: [id])
+  participants MatchParticipant[]
+  result       Result?
+  dispute      Dispute?
+}
+
+model MatchParticipant {
+  id        String   @id @default(cuid())
+  matchId   String
+  userId    String
+  team      Int      @default(1)
+  joinedAt  DateTime @default(now())
+
+  match     Match    @relation(fields: [matchId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+}
+
+// ── Results ──────────────────────────────────────────────────────
+model Result {
+  id           String   @id @default(cuid())
+  matchId      String   @unique
+  reporterId   String
+  winnerId     String?
+  evidenceUrl  String?
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  match        Match    @relation(fields: [matchId], references: [id])
+  reporter     User     @relation(fields: [reporterId], references: [id])
+}
+
+// ── Disputes ─────────────────────────────────────────────────────
+model Dispute {
+  id            String    @id @default(cuid())
+  matchId       String    @unique
+  reporterId    String
+  resolverId    String?
+  reason        String
+  evidenceUrl   String?
+  resolution    String?
+  resolvedAt    DateTime?
+  status        String    @default("open")
+  createdAt     DateTime  @default(now())
+
+  match         Match     @relation(fields: [matchId], references: [id])
+  reporter      User      @relation("DisputeReporter", fields: [reporterId], references: [id])
+  resolver      User?     @relation("DisputeResolver", fields: [resolverId], references: [id])
+}
+
+// ── Tournaments ──────────────────────────────────────────────────
+model Tournament {
+  id             String   @id @default(cuid())
+  name           String
+  game           String   @default("Warzone")
+  format         String
+  tournamentType String   @default("detri")
+  entryFee       Float
+  prizePool      Float    @default(0)
+  maxSlots       Int
+  filledSlots    Int      @default(0)
+  status         String   @default("registration")
+  startDate      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  entries        TournamentEntry[]
+}
+
+model TournamentEntry {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  placement    Int?
+  joinedAt     DateTime @default(now())
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+}
+
+// ── Ranking Records ──────────────────────────────────────────────
+model RankingMatchRecord {
+  id                         String   @id @default(cuid())
+  playerId                   String
+  tournamentType             String
+  date                       DateTime @default(now())
+  kills                      Int      @default(0)
+  deaths                     Int      @default(0)
+  position                   Int      @default(1)
+  totalTeams                 Int      @default(1)
+  teamKills                  Int      @default(0)
+  teamPoints                 Float    @default(0)
+  bestKillsInTournament      Int      @default(0)
+  bestTeamPointsInTournament Float    @default(0)
+
+  player                     User     @relation(fields: [playerId], references: [id])
+}

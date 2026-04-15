@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 interface DiscordTokenResponse {
   access_token: string;
@@ -94,6 +95,28 @@ export async function GET(request: NextRequest) {
     refreshToken: tokenData.refresh_token,
     expiresAt: Date.now() + tokenData.expires_in * 1000,
   };
+
+  /* ── Persist user in database ──────────────────────────────── */
+  let dbUser = await prisma.user.findUnique({
+    where: { discordId: discordUser.id },
+  });
+
+  if (!dbUser) {
+    dbUser = await prisma.user.create({
+      data: {
+        username: sessionPayload.username,
+        email: sessionPayload.email,
+        avatar: avatarUrl,
+        discordId: discordUser.id,
+        wallet: { create: {} },
+      },
+    });
+  } else {
+    await prisma.user.update({
+      where: { id: dbUser.id },
+      data: { avatar: avatarUrl, username: sessionPayload.username },
+    });
+  }
 
   /* ── Set session cookie & redirect ───────────────────────── */
   const response = NextResponse.redirect(`${baseUrl}/perfil`);
