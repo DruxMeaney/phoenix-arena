@@ -1,8 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /* ── SVG Icons ───────────────────────────────────────────────── */
+const IconDiscord = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+  </svg>
+);
+const IconLink = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>
+);
+const IconRefresh = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+  </svg>
+);
 const IconTrophy = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><path d="M6 3h12v7a6 6 0 0 1-12 0V3z"/><path d="M12 16v3"/><path d="M8 22h8"/><path d="M8 22a2 2 0 0 1-2-2v-1h12v1a2 2 0 0 1-2 2H8z"/></svg>
 );
@@ -72,6 +90,43 @@ const tournaments = [
 /* ── Component ────────────────────────────────────────────────── */
 export default function PerfilPage() {
   const [activeSection, setActiveSection] = useState<"partidas" | "torneos">("partidas");
+  const [user, setUser] = useState<{ username: string; avatar: string; provider: string } | null>(null);
+  const [codStats, setCodStats] = useState<{
+    kdRatio: number; wins: number; gamesPlayed: number; kills: number; deaths: number;
+  } | null>(null);
+  const [codLoading, setCodLoading] = useState(false);
+  const [activisionId, setActivisionId] = useState("");
+  const [codLinked, setCodLinked] = useState(false);
+
+  useEffect(() => {
+    // Read user cookie
+    try {
+      const cookie = document.cookie.split("; ").find(c => c.startsWith("phoenix_user="));
+      if (cookie) {
+        const data = JSON.parse(decodeURIComponent(cookie.split("=").slice(1).join("=")));
+        setUser(data);
+      }
+    } catch { /* no session */ }
+  }, []);
+
+  const lookupCod = async () => {
+    if (!activisionId) return;
+    setCodLoading(true);
+    try {
+      const res = await fetch(`/api/cod?username=${encodeURIComponent(activisionId)}&platform=uno`);
+      if (res.ok) {
+        const data = await res.json();
+        const lt = data.data.lifetime;
+        setCodStats({ kdRatio: lt.kdRatio, wins: lt.wins, gamesPlayed: lt.gamesPlayed, kills: lt.kills, deaths: lt.deaths });
+        setCodLinked(true);
+      }
+    } catch { /* ignore */ }
+    setCodLoading(false);
+  };
+
+  const displayName = user?.username || "GeroBeta";
+  const avatarUrl = user?.avatar;
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,12 +136,16 @@ export default function PerfilPage() {
         <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             {/* Avatar */}
-            <div className="w-20 h-20 rounded-full bg-gradient-main flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-lg">
-              GB
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={displayName} className="w-20 h-20 rounded-full shadow-lg shrink-0 border-2 border-border" />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-main flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-lg">
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-bold">GeroBeta</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">{displayName}</h1>
                 <span className="badge-pro px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">PRO</span>
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-muted">
@@ -96,6 +155,104 @@ export default function PerfilPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ── Linked Accounts ─────────────────────────────────── */}
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4 flex items-center gap-2">
+            <IconLink /> Cuentas vinculadas
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Discord */}
+            <div className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+              user?.provider === "discord" ? "border-[#5865F2]/40 bg-[#5865F2]/5" : "border-border bg-surface-2"
+            }`}>
+              <div className="w-10 h-10 rounded-full bg-[#5865F2] flex items-center justify-center shrink-0">
+                <IconDiscord className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Discord</p>
+                {user?.provider === "discord" ? (
+                  <p className="text-xs text-success flex items-center gap-1"><IconCheck /> Conectado como {user.username}</p>
+                ) : (
+                  <p className="text-xs text-muted">No vinculado</p>
+                )}
+              </div>
+              {user?.provider !== "discord" && (
+                <a href="/api/auth/discord" className="text-xs px-3 py-1.5 rounded-lg bg-[#5865F2] text-white font-medium hover:bg-[#4752C4] transition-colors">
+                  Vincular
+                </a>
+              )}
+            </div>
+
+            {/* Activision / COD */}
+            <div className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+              codLinked ? "border-success/40 bg-success/5" : "border-border bg-surface-2"
+            }`}>
+              <div className="w-10 h-10 rounded-full bg-surface-3 flex items-center justify-center shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="6" y1="12" x2="10" y2="12" /><line x1="8" y1="10" x2="8" y2="14" /><line x1="15" y1="13" x2="15.01" y2="13" /><line x1="18" y1="11" x2="18.01" y2="11" /><rect x="2" y="6" width="20" height="12" rx="5" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Activision ID</p>
+                {codLinked ? (
+                  <p className="text-xs text-success flex items-center gap-1"><IconCheck /> {activisionId}</p>
+                ) : (
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={activisionId}
+                      onChange={(e) => setActivisionId(e.target.value)}
+                      placeholder="Usuario#1234567"
+                      className="bg-surface-3 border border-border rounded-lg px-2.5 py-1 text-xs text-foreground placeholder:text-muted/50 w-40 focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      onClick={lookupCod}
+                      disabled={codLoading || !activisionId}
+                      className="text-xs px-3 py-1 rounded-lg bg-surface-3 border border-border text-foreground font-medium hover:bg-border/50 disabled:opacity-40 transition-colors"
+                    >
+                      {codLoading ? "..." : "Vincular"}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {codLinked && (
+                <button onClick={() => { setCodLinked(false); setCodStats(null); }} className="text-muted hover:text-foreground transition-colors">
+                  <IconRefresh />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* COD Stats Card (shown when linked) */}
+          {codLinked && codStats && (
+            <div className="mt-4 bg-surface-2 border border-border rounded-xl p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Estadisticas de Warzone</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
+                <div>
+                  <p className="text-xl font-bold text-foreground">{codStats.kdRatio.toFixed(2)}</p>
+                  <p className="text-xs text-muted">K/D Ratio</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-foreground">{codStats.kills.toLocaleString()}</p>
+                  <p className="text-xs text-muted">Kills Totales</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-foreground">{codStats.deaths.toLocaleString()}</p>
+                  <p className="text-xs text-muted">Muertes</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-success">{codStats.wins.toLocaleString()}</p>
+                  <p className="text-xs text-muted">Victorias</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-foreground">{codStats.gamesPlayed.toLocaleString()}</p>
+                  <p className="text-xs text-muted">Partidas</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Stats Grid ──────────────────────────────────────── */}
