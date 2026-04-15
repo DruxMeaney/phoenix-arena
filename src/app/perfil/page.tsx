@@ -166,37 +166,46 @@ export default function PerfilPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* ── Ambient neon glow (full page) ───────────────────────── */}
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: `radial-gradient(ellipse at 50% 0%, ${theme.accent}12 0%, transparent 50%)` }} />
+
       {/* ── Neon Banner ─────────────────────────────────────────── */}
-      <div className="relative h-48 sm:h-64 overflow-hidden" style={{ background: bannerStyle }}>
+      <div className="relative h-56 sm:h-72 overflow-hidden" style={{ background: bannerStyle }}>
         {/* Neon scan lines */}
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)" }} />
-        {/* Bottom neon edge */}
-        <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent 0%, ${theme.accent} 50%, transparent 100%)`, boxShadow: `0 0 20px ${theme.accent}, 0 0 40px ${theme.accent}40` }} />
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute inset-0 opacity-15" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.05) 2px, rgba(255,255,255,0.05) 4px)" }} />
+        {/* Neon glow from top */}
+        <div className="absolute top-0 left-0 right-0 h-32" style={{ background: `radial-gradient(ellipse at 50% 0%, ${theme.accent}25 0%, transparent 70%)` }} />
+        {/* Side neon strips */}
+        <div className="absolute top-0 left-0 w-px h-full" style={{ background: `linear-gradient(180deg, ${theme.accent}60 0%, transparent 100%)`, boxShadow: `0 0 15px ${theme.accent}60` }} />
+        <div className="absolute top-0 right-0 w-px h-full" style={{ background: `linear-gradient(180deg, ${theme.accent}60 0%, transparent 100%)`, boxShadow: `0 0 15px ${theme.accent}60` }} />
+        {/* Bottom neon edge — thicker and brighter */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent 5%, ${theme.accent} 50%, transparent 95%)`, boxShadow: `0 0 30px ${theme.accent}, 0 0 60px ${theme.accent}60, 0 0 100px ${theme.accent}30` }} />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-16 relative z-10 pb-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-20 relative z-10 pb-16">
         {/* ── Profile Header ──────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 mb-8">
-          {/* Avatar with neon ring */}
+          {/* Avatar with intense neon ring */}
           <div className="relative">
-            <div className="absolute -inset-1 rounded-full opacity-60" style={{ background: `linear-gradient(135deg, ${theme.accent}, transparent)`, filter: `blur(8px)` }} />
+            <div className="absolute -inset-2 rounded-full animate-pulse" style={{ background: `conic-gradient(from 0deg, ${theme.accent}, transparent, ${theme.accent})`, filter: `blur(12px)`, opacity: 0.7 }} />
+            <div className="absolute -inset-1 rounded-full" style={{ background: `linear-gradient(135deg, ${theme.accent}, ${theme.accent}40, ${theme.accent})`, filter: `blur(6px)`, opacity: 0.8 }} />
             {profile.avatar ? (
-              <img src={profile.avatar} alt={profile.username} className={`relative w-28 h-28 rounded-full border-2 ${theme.border}`} />
+              <img src={profile.avatar} alt={profile.username} className="relative w-32 h-32 rounded-full border-[3px]" style={{ borderColor: theme.accent, boxShadow: `0 0 20px ${theme.accent}60, inset 0 0 20px ${theme.accent}20` }} />
             ) : (
-              <div className={`relative w-28 h-28 rounded-full border-2 ${theme.border} bg-surface flex items-center justify-center text-3xl font-bold ${theme.text}`}>
+              <div className="relative w-32 h-32 rounded-full border-[3px] bg-surface flex items-center justify-center text-3xl font-bold" style={{ borderColor: theme.accent, boxShadow: `0 0 20px ${theme.accent}60, inset 0 0 20px ${theme.accent}20`, color: theme.accent }}>
                 {profile.username.slice(0, 2).toUpperCase()}
               </div>
             )}
-            {/* XP level badge */}
-            <div className={`absolute -bottom-1 -right-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-background border ${theme.border} ${theme.text}`}>
+            {/* XP level badge — neon glow */}
+            <div className="absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-background" style={{ border: `2px solid ${theme.accent}`, boxShadow: `0 0 12px ${theme.accent}50`, color: theme.accent }}>
               {Math.floor(profile.xp / 100)} LVL
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold">{profile.username}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold" style={{ textShadow: `0 0 20px ${theme.accent}40` }}>{profile.username}</h1>
               <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                 profile.tier === "PRO" ? "badge-pro" : profile.tier === "AM" ? "badge-am" : "badge-detri"
               }`}>{profile.tier}</span>
@@ -230,8 +239,8 @@ export default function PerfilPage() {
             { label: "Saldo", value: `$${profile.balance.toFixed(2)}`, color: "text-success" },
             { label: "Nivel", value: `${Math.floor(profile.xp / 100)}`, color: "text-purple-400" },
           ].map((s) => (
-            <div key={s.label} className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-xl p-4 text-center`} style={{ boxShadow: `0 0 15px ${theme.accent}10` }}>
-              <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+            <div key={s.label} className="bg-surface/40 backdrop-blur-sm rounded-xl p-4 text-center transition-all hover:scale-105" style={{ border: `1px solid ${theme.accent}30`, boxShadow: `0 0 20px ${theme.accent}15, inset 0 0 30px ${theme.accent}05` }}>
+              <p className={`text-xl font-bold ${s.color}`} style={{ textShadow: `0 0 15px currentColor` }}>{s.value}</p>
               <p className="text-[10px] text-muted uppercase tracking-wider mt-1">{s.label}</p>
             </div>
           ))}
@@ -278,14 +287,15 @@ export default function PerfilPage() {
         )}
 
         {/* ── Tabs ────────────────────────────────────────────── */}
-        <div className="flex gap-1 bg-surface/30 backdrop-blur-sm p-1 rounded-xl border border-border mb-8 w-fit">
+        <div className="flex gap-1 bg-surface/30 backdrop-blur-sm p-1.5 rounded-xl mb-8 w-fit" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 15px ${theme.accent}10` }}>
           {(["feed", "stats", "edit"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); if (tab === "edit") setEditing(true); else setEditing(false); }}
               className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab ? `bg-gradient-main text-white shadow-lg ${theme.glow}` : "text-muted hover:text-foreground"
+                activeTab === tab ? "bg-gradient-main text-white" : "text-muted hover:text-foreground"
               }`}
+              style={activeTab === tab ? { boxShadow: `0 0 20px ${theme.accent}40, 0 0 40px ${theme.accent}15` } : {}}
             >
               {tab === "feed" ? "Mi Muro" : tab === "stats" ? "Estadisticas" : "Editar Perfil"}
             </button>
@@ -345,7 +355,7 @@ export default function PerfilPage() {
               profile.posts.map((post) => {
                 const pt = postTypes.find((p) => p.value === post.postType);
                 return (
-                  <div key={post.id} className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-5 transition-all hover:shadow-lg ${theme.glow}`} style={{ boxShadow: `0 0 10px ${theme.accent}05` }}>
+                  <div key={post.id} className="bg-surface/40 backdrop-blur-sm rounded-2xl p-5 transition-all hover:scale-[1.01]" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 10px ${theme.accent}08, inset 0 1px 0 ${theme.accent}15` }}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         {profile.avatar ? (
