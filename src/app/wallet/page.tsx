@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 /* ── SVG Icons ───────────────────────────────────────────────── */
 const IconWallet = () => (
@@ -69,6 +69,101 @@ export default function WalletPage() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [balance, setBalance] = useState(0);
+  const [heldBalance, setHeldBalance] = useState(0);
+  const [txList, setTxList] = useState<{ id: string; type: string; amount: number; description: string; status: string; createdAt: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const fetchWallet = useCallback(async () => {
+    try {
+      const res = await fetch("/api/wallet");
+      if (res.ok) {
+        const data = await res.json();
+        setBalance(data.balance);
+        setHeldBalance(data.heldBalance);
+        setTxList(data.transactions || []);
+      }
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchWallet(); }, [fetchWallet]);
+
+  const handleDeposit = async () => {
+    const amt = selectedAmount || parseFloat(customAmount);
+    if (!amt || amt < 1) { setMessage({ type: "error", text: "Ingresa un monto valido" }); return; }
+
+    setDepositLoading(true);
+    setMessage(null);
+
+    try {
+      // Try PayPal first
+      const res = await fetch("/api/paypal/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.approvalUrl) {
+          window.location.href = data.approvalUrl;
+          return;
+        }
+      }
+
+      // Fallback to direct deposit (demo mode)
+      const depositRes = await fetch("/api/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deposit", amount: amt }),
+      });
+
+      if (depositRes.ok) {
+        setMessage({ type: "success", text: `Deposito de $${amt.toFixed(2)} exitoso` });
+        setSelectedAmount(null);
+        setCustomAmount("");
+        fetchWallet();
+      } else {
+        const err = await depositRes.json();
+        setMessage({ type: "error", text: err.error || "Error al depositar" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Error de conexion" });
+    }
+    setDepositLoading(false);
+  };
+
+  const handleWithdraw = async () => {
+    const amt = parseFloat(withdrawAmount);
+    if (!amt || amt < 10) { setMessage({ type: "error", text: "El retiro minimo es $10.00" }); return; }
+
+    setWithdrawLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "withdraw", amount: amt }),
+      });
+
+      if (res.ok) {
+        setMessage({ type: "success", text: `Retiro de $${amt.toFixed(2)} en proceso` });
+        setWithdrawAmount("");
+        fetchWallet();
+      } else {
+        const err = await res.json();
+        setMessage({ type: "error", text: err.error || "Error al retirar" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Error de conexion" });
+    }
+    setWithdrawLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,8 +183,10 @@ export default function WalletPage() {
         {/* ── Balance Card ────────────────────────────────────── */}
         <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 glow">
           <p className="text-sm text-muted mb-1">Saldo Disponible</p>
-          <p className="text-4xl sm:text-5xl font-bold text-gradient tracking-tight">$0.00</p>
-          <p className="text-sm text-muted mt-2">Fondos en Garantia: $0.00</p>
+          <p className="text-4xl sm:text-5xl font-bold text-gradient tracking-tight">
+            {loading ? "..." : `$${balance.toFixed(2)}`}
+          </p>
+          <p className="text-sm text-muted mt-2">Fondos en Garantia: ${heldBalance.toFixed(2)}</p>
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => setActiveTab("depositar")}
@@ -158,23 +255,25 @@ export default function WalletPage() {
             <div>
               <p className="text-sm text-muted mb-3">Metodo de pago</p>
               <div className="grid sm:grid-cols-2 gap-3">
-                <div className="flex items-center gap-3 p-4 bg-surface-2 border border-border rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <span className="text-blue-400 text-xs font-bold">S</span>
+                <div className="flex items-center gap-3 p-4 bg-[#0070ba]/10 border border-[#0070ba]/30 rounded-xl cursor-pointer transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-[#0070ba]/15 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#0070ba"><path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 0 0-.794.68l-.04.22-.63 3.993-.032.17a.804.804 0 0 1-.794.679H8.044a.483.483 0 0 1-.477-.558L7.82 20.9l.164-1.035.015-.098a.804.804 0 0 1 .794-.68h.5c3.238 0 5.774-1.314 6.514-5.12.256-1.313.192-2.447-.3-3.327a2.74 2.74 0 0 0-.788-.837c.467.192.87.464 1.181.837l.167-.162zM17.167 5.5c-.467-.192-.984-.33-1.548-.415A11.453 11.453 0 0 0 13.5 4.92h-4.84a.805.805 0 0 0-.794.68L6.038 17.227a.579.579 0 0 0 .572.67h3.3l.828-5.247-.026.165a.805.805 0 0 1 .794-.68h1.654c3.238 0 5.774-1.314 6.514-5.12.219-1.126.106-2.066-.3-2.814a3.78 3.78 0 0 0-1.207-.701z"/></svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Stripe</p>
-                    <p className="text-xs text-muted">Tarjeta de credito/debito</p>
+                    <p className="text-sm font-medium">PayPal</p>
+                    <p className="text-xs text-muted">Tarjeta, saldo PayPal</p>
                   </div>
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success">Activo</span>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-surface-2 border border-border rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors">
-                  <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                    <span className="text-red-400 text-xs font-bold">OP</span>
+                <div className="flex items-center gap-3 p-4 bg-surface-2 border border-border rounded-xl opacity-50">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <span className="text-blue-400 text-xs font-bold">MP</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">OpenPay</p>
+                    <p className="text-sm font-medium">MercadoPago</p>
                     <p className="text-xs text-muted">OXXO, SPEI, tarjeta</p>
                   </div>
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-3 text-muted">Pronto</span>
                 </div>
               </div>
             </div>
@@ -187,8 +286,20 @@ export default function WalletPage() {
               </p>
             </div>
 
-            <button className="w-full py-3.5 bg-gradient-main text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
-              Confirmar Deposito
+            {message && (
+              <div className={`p-4 rounded-xl text-sm font-medium ${
+                message.type === "success" ? "bg-success/10 text-success border border-success/30" : "bg-red-500/10 text-red-400 border border-red-500/30"
+              }`}>
+                {message.text}
+              </div>
+            )}
+
+            <button
+              onClick={handleDeposit}
+              disabled={depositLoading || (!selectedAmount && !customAmount)}
+              className="w-full py-3.5 bg-gradient-main text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              {depositLoading ? "Procesando..." : "Depositar con PayPal"}
             </button>
           </div>
         ) : (
@@ -207,7 +318,7 @@ export default function WalletPage() {
                   className="w-full pl-8 pr-4 py-3 bg-surface-2 border border-border rounded-xl text-foreground placeholder:text-muted/50 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
-              <p className="text-xs text-muted mt-2">Disponible: $185.50</p>
+              <p className="text-xs text-muted mt-2">Disponible: ${balance.toFixed(2)}</p>
             </div>
 
             {/* Info notices */}
@@ -228,8 +339,20 @@ export default function WalletPage() {
               </div>
             </div>
 
-            <button className="w-full py-3.5 bg-gradient-main text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
-              Solicitar Retiro
+            {message && activeTab === "retirar" && (
+              <div className={`p-4 rounded-xl text-sm font-medium ${
+                message.type === "success" ? "bg-success/10 text-success border border-success/30" : "bg-red-500/10 text-red-400 border border-red-500/30"
+              }`}>
+                {message.text}
+              </div>
+            )}
+
+            <button
+              onClick={handleWithdraw}
+              disabled={withdrawLoading || !withdrawAmount}
+              className="w-full py-3.5 bg-gradient-main text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              {withdrawLoading ? "Procesando..." : "Solicitar Retiro"}
             </button>
           </div>
         )}
@@ -252,25 +375,32 @@ export default function WalletPage() {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((tx, i) => (
+                {txList.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-muted">
+                      <p className="text-sm">Sin transacciones todavia</p>
+                      <p className="text-xs mt-1">Deposita fondos para comenzar a competir</p>
+                    </td>
+                  </tr>
+                ) : txList.map((tx) => (
                   <tr
-                    key={i}
+                    key={tx.id}
                     className="border-b border-border/50 hover:bg-surface-2/50 transition-colors"
                   >
-                    <td className="px-6 py-3.5 text-muted whitespace-nowrap">{tx.fecha}</td>
+                    <td className="px-6 py-3.5 text-muted whitespace-nowrap">{new Date(tx.createdAt).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}</td>
                     <td className="px-6 py-3.5">
-                      <span className={`font-medium ${typeColor[tx.tipo]}`}>{tx.tipo}</span>
+                      <span className={`font-medium ${tx.type === "deposit" ? "text-blue-500" : tx.type === "withdrawal" ? "text-red-500" : tx.type === "challenge_win" || tx.type === "tournament_prize" ? "text-success" : "text-muted"}`}>{tx.type === "deposit" ? "Deposito" : tx.type === "withdrawal" ? "Retiro" : tx.type === "challenge_entry" ? "Entrada Reto" : tx.type === "challenge_win" ? "Premio Reto" : tx.type === "tournament_entry" ? "Entrada Torneo" : tx.type === "tournament_prize" ? "Premio Torneo" : tx.type}</span>
                     </td>
-                    <td className="px-6 py-3.5 text-foreground">{tx.descripcion}</td>
+                    <td className="px-6 py-3.5 text-foreground">{tx.description}</td>
                     <td className={`px-6 py-3.5 text-right font-mono font-semibold ${
-                      tx.monto.startsWith("+") ? "text-success" : "text-red-400"
+                      tx.amount > 0 ? "text-success" : "text-red-400"
                     }`}>
-                      {tx.monto}
+                      {tx.amount > 0 ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
                     </td>
                     <td className="px-6 py-3.5 text-right">
-                      <span className={`inline-flex items-center gap-1.5 ${statusConfig[tx.estado].color}`}>
-                        {statusConfig[tx.estado].icon}
-                        <span className="text-xs font-medium">{tx.estado}</span>
+                      <span className={`inline-flex items-center gap-1.5 ${tx.status === "completed" ? "text-success" : tx.status === "processing" ? "text-warning" : "text-red-500"}`}>
+                        {tx.status === "completed" ? <IconCheck /> : tx.status === "processing" ? <IconClock /> : <IconX />}
+                        <span className="text-xs font-medium capitalize">{tx.status === "completed" ? "Completado" : tx.status === "processing" ? "Procesando" : "Fallido"}</span>
                       </span>
                     </td>
                   </tr>

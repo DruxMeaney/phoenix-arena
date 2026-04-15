@@ -1,7 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Ahora';
+  if (mins < 60) return `Hace ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `Hace ${hrs}h`;
+  return `Hace ${Math.floor(hrs / 24)}d`;
+}
 
 type Modalidad = 'Todos' | '1v1' | 'Duo' | 'Trio';
 type Estado = 'Todos' | 'Abierto' | 'En Progreso';
@@ -19,7 +29,7 @@ interface Challenge {
   tiempoPublicado: string;
 }
 
-const mockChallenges: Challenge[] = [];
+const initialChallenges: Challenge[] = [];
 
 function tierBadgeClass(tier: Challenge['creadorTier']) {
   if (tier === 'pro') return 'badge-pro';
@@ -51,17 +61,52 @@ export default function RetosPage() {
   const [modalidad, setModalidad] = useState<Modalidad>('Todos');
   const [montoRange, setMontoRange] = useState<MontoRange>('Todos');
   const [estado, setEstado] = useState<Estado>('Todos');
+  const [challenges, setChallenges] = useState<Challenge[]>(initialChallenges);
+  const [accepting, setAccepting] = useState<string | null>(null);
 
-  const filtered = mockChallenges.filter((c) => {
+  const fetchChallenges = useCallback(async () => {
+    try {
+      const res = await fetch('/api/matches');
+      if (res.ok) {
+        const data = await res.json();
+        const mapped: Challenge[] = (data.matches || []).map((m: { id: string; creator: { username: string; tier: string }; modalidad: string; game: string; amount: number; status: string; rules: string; createdAt: string }) => ({
+          id: m.id,
+          creador: m.creator.username,
+          creadorTier: (m.creator.tier || 'detri').toLowerCase() as Challenge['creadorTier'],
+          modalidad: m.modalidad as Challenge['modalidad'],
+          juego: m.game,
+          monto: m.amount,
+          estado: m.status === 'open' ? 'Abierto' as const : 'En Progreso' as const,
+          reglas: m.rules,
+          tiempoPublicado: formatTimeAgo(m.createdAt),
+        }));
+        setChallenges(mapped);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchChallenges(); }, [fetchChallenges]);
+
+  const handleAccept = async (id: string) => {
+    setAccepting(id);
+    try {
+      const res = await fetch(`/api/matches/${id}/accept`, { method: 'POST' });
+      if (res.ok) { fetchChallenges(); }
+      else { const err = await res.json(); alert(err.error || 'Error al aceptar'); }
+    } catch { alert('Error de conexion'); }
+    setAccepting(null);
+  };
+
+  const filtered = challenges.filter((c) => {
     if (modalidad !== 'Todos' && c.modalidad !== modalidad) return false;
     if (estado !== 'Todos' && c.estado !== estado) return false;
     if (!matchesMontoRange(c.monto, montoRange)) return false;
     return true;
   });
 
-  const abiertos = mockChallenges.filter((c) => c.estado === 'Abierto').length;
-  const enProgreso = mockChallenges.filter((c) => c.estado === 'En Progreso').length;
-  const totalEnJuego = mockChallenges.reduce((sum, c) => {
+  const abiertos = challenges.filter((c) => c.estado === 'Abierto').length;
+  const enProgreso = challenges.filter((c) => c.estado === 'En Progreso').length;
+  const totalEnJuego = challenges.reduce((sum, c) => {
     const players = c.modalidad === '1v1' ? 2 : c.modalidad === 'Duo' ? 4 : 6;
     return sum + c.monto * players;
   }, 0);
@@ -240,8 +285,12 @@ export default function RetosPage() {
 
                 {/* Action Button */}
                 {c.estado === 'Abierto' ? (
-                  <button className="w-full py-2.5 rounded-xl bg-gradient-main text-white font-medium text-sm hover:opacity-90 transition-opacity cursor-pointer">
-                    Aceptar Reto
+                  <button
+                    onClick={() => handleAccept(c.id)}
+                    disabled={accepting === c.id}
+                    className="w-full py-2.5 rounded-xl bg-gradient-main text-white font-medium text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-40"
+                  >
+                    {accepting === c.id ? 'Aceptando...' : 'Aceptar Reto'}
                   </button>
                 ) : (
                   <button

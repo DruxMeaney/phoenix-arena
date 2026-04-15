@@ -87,8 +87,10 @@ export default function PerfilPage() {
   const [activisionId, setActivisionId] = useState("");
   const [codLinked, setCodLinked] = useState(false);
 
+  const [dbUser, setDbUser] = useState<{ id: string; tier: string; region: string; activisionId: string | null; createdAt: string; balance: number } | null>(null);
+
   useEffect(() => {
-    // Read user cookie
+    // Read user cookie for basic display
     try {
       const cookie = document.cookie.split("; ").find(c => c.startsWith("phoenix_user="));
       if (cookie) {
@@ -96,6 +98,20 @@ export default function PerfilPage() {
         setUser(data);
       }
     } catch { /* no session */ }
+
+    // Fetch full profile from DB
+    fetch("/api/users/me").then(res => {
+      if (res.ok) return res.json();
+      return null;
+    }).then(data => {
+      if (data?.user) {
+        setDbUser(data.user);
+        if (data.user.activisionId) {
+          setActivisionId(data.user.activisionId);
+          setCodLinked(true);
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   const lookupCod = async () => {
@@ -145,9 +161,9 @@ export default function PerfilPage() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-muted">
-                <span>Game ID: <span className="text-foreground font-mono">#PA-00142</span></span>
-                <span>Region: <span className="text-foreground">LATAM Norte</span></span>
-                <span>Miembro desde: <span className="text-foreground">Enero 2026</span></span>
+                {dbUser && <span>ID: <span className="text-foreground font-mono">#{dbUser.id.slice(0, 8)}</span></span>}
+                <span>Region: <span className="text-foreground">{dbUser?.region || "LATAM Norte"}</span></span>
+                {dbUser && <span>Miembro desde: <span className="text-foreground">{new Date(dbUser.createdAt).toLocaleDateString("es-MX", { month: "long", year: "numeric" })}</span></span>}
               </div>
             </div>
           </div>
