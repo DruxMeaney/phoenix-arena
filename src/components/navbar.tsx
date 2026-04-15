@@ -102,7 +102,7 @@ export function Navbar() {
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <PhoenixLogo />
+          <img src="/logo-emblem.png" alt="Phoenix Arena" className="h-9 w-9 rounded-full" />
           <span className="text-gradient text-lg font-bold tracking-tight">PHOENIX ARENA</span>
         </Link>
 

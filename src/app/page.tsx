@@ -299,6 +299,11 @@ export default function Home() {
         <div className="pointer-events-none absolute -right-32 top-40 h-[380px] w-[380px] rounded-full bg-blue-500/[.06] blur-[120px]" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
+          {/* Hero Logo */}
+          <div className="mb-8 animate-fade-up">
+            <img src="/logo-color.png" alt="Phoenix Arena" className="mx-auto h-28 sm:h-36 lg:h-44 drop-shadow-2xl" />
+          </div>
+
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl leading-tight animate-fade-up">
             Compite. Demuestra tu <span className="text-gradient">Habilidad</span>. Gana.
           </h1>

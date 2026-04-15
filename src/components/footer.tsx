@@ -28,10 +28,14 @@ function PhoenixLogo({ className = "h-8 w-8" }: { className?: string }) {
 }
 
 const platformLinks = [
+  { href: "/quickmatch", label: "QuickMatch" },
   { href: "/retos", label: "Retos" },
+  { href: "/ladder", label: "Arena Ladder" },
   { href: "/torneos", label: "Torneos" },
   { href: "/ranking", label: "Ranking" },
+  { href: "/tienda", label: "Tienda Phoenix" },
   { href: "/wallet", label: "Monedero" },
+  { href: "/pulso", label: "Pulso" },
 ];
 
 const infoLinks = [
@@ -77,7 +81,7 @@ export function Footer() {
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 mb-4">
-              <PhoenixLogo />
+              <img src="/logo-color.png" alt="Phoenix Arena" className="h-12 w-12 rounded-lg" />
               <span className="text-gradient text-lg font-bold tracking-tight">
                 PHOENIX ARENA
               </span>
