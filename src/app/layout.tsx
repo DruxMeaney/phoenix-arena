@@ -11,6 +11,36 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Phoenix Arena — Plataforma Competitiva de Habilidad",
   description: "Compite, demuestra tu habilidad y gana premios reales. La plataforma competitiva de referencia para jugadores de LATAM.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "Phoenix Arena — Plataforma Competitiva de Habilidad",
+    description: "Donde la habilidad se convierte en premio. Retos 1v1, torneos y ranking profesional para jugadores de LATAM.",
+    url: "https://phoenix-arena.vercel.app",
+    siteName: "Phoenix Arena",
+    images: [
+      {
+        url: "https://phoenix-arena.vercel.app/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Phoenix Arena",
+      },
+    ],
+    locale: "es_MX",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Phoenix Arena — Plataforma Competitiva de Habilidad",
+    description: "Donde la habilidad se convierte en premio. Retos 1v1, torneos y ranking profesional para jugadores de LATAM.",
+    images: ["https://phoenix-arena.vercel.app/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
