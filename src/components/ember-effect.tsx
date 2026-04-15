@@ -95,27 +95,38 @@ export function EmberEffect() {
       time++;
       ctx.clearRect(0, 0, w(), h());
 
-      // ── Bottom glow (burning effect) ──
-      const glowHeight = h() * 0.4;
+      // ── Bottom glow (burning effect) — covers 70% of viewport ──
+      const glowHeight = h() * 0.7;
       const gradient = ctx.createLinearGradient(0, h(), 0, h() - glowHeight);
-      gradient.addColorStop(0, "rgba(220, 38, 38, 0.08)");
-      gradient.addColorStop(0.3, "rgba(239, 68, 68, 0.04)");
-      gradient.addColorStop(0.6, "rgba(249, 115, 22, 0.02)");
+      gradient.addColorStop(0, "rgba(220, 38, 38, 0.18)");
+      gradient.addColorStop(0.15, "rgba(239, 68, 68, 0.12)");
+      gradient.addColorStop(0.3, "rgba(249, 115, 22, 0.07)");
+      gradient.addColorStop(0.5, "rgba(249, 115, 22, 0.03)");
+      gradient.addColorStop(0.7, "rgba(180, 60, 20, 0.01)");
       gradient.addColorStop(1, "transparent");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, h() - glowHeight, w(), glowHeight);
 
-      // Pulsing glow around logo
+      // Secondary warm glow layer
+      const warmGlow = ctx.createLinearGradient(0, h(), 0, h() - h() * 0.35);
+      warmGlow.addColorStop(0, "rgba(255, 100, 30, 0.10)");
+      warmGlow.addColorStop(0.5, "rgba(200, 50, 20, 0.04)");
+      warmGlow.addColorStop(1, "transparent");
+      ctx.fillStyle = warmGlow;
+      ctx.fillRect(0, h() - h() * 0.35, w(), h() * 0.35);
+
+      // Pulsing glow around logo — larger radius
       const pulse = Math.sin(time * 0.02) * 0.3 + 0.7;
       const logoGlow = ctx.createRadialGradient(
         logoX(), logoY(), 0,
-        logoX(), logoY(), 200 * pulse
+        logoX(), logoY(), 350 * pulse
       );
-      logoGlow.addColorStop(0, `rgba(220, 38, 38, ${0.12 * pulse})`);
-      logoGlow.addColorStop(0.4, `rgba(239, 68, 68, ${0.05 * pulse})`);
+      logoGlow.addColorStop(0, `rgba(220, 38, 38, ${0.20 * pulse})`);
+      logoGlow.addColorStop(0.3, `rgba(239, 68, 68, ${0.10 * pulse})`);
+      logoGlow.addColorStop(0.6, `rgba(249, 115, 22, ${0.04 * pulse})`);
       logoGlow.addColorStop(1, "transparent");
       ctx.fillStyle = logoGlow;
-      ctx.fillRect(0, h() - 400, 500, 400);
+      ctx.fillRect(0, h() - 600, 700, 600);
 
       // ── Concentric energy waves from logo ──
       if (time % 90 === 0) spawnWave();

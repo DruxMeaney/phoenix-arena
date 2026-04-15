@@ -300,8 +300,11 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
           {/* Hero Logo */}
-          <div className="mb-8 animate-fade-up">
-            <img src="/logo-color.png" alt="Phoenix Arena" className="mx-auto h-28 sm:h-36 lg:h-44 drop-shadow-2xl" />
+          <div className="mb-10 animate-fade-up flex justify-center">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-3xl bg-[#2d1b69]/60 blur-2xl scale-110" />
+              <img src="/logo-color.png" alt="Phoenix Arena" className="relative h-48 sm:h-64 lg:h-80 drop-shadow-2xl rounded-2xl" style={{ background: "radial-gradient(circle, rgba(45,27,105,0.8) 0%, rgba(45,27,105,0.4) 60%, transparent 100%)" }} />
+            </div>
           </div>
 
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl leading-tight animate-fade-up">
@@ -326,25 +329,12 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Stats row */}
-          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 animate-fade-up" style={{ animationDelay: ".3s" }}>
-            {[
-              { value: "500+", label: "Jugadores Activos" },
-              { value: "$50,000+", label: "En Premios" },
-              { value: "1,000+", label: "Partidas" },
-              { value: "99.5%", label: "Pagos Exitosos" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-gradient text-2xl sm:text-3xl font-bold">{stat.value}</div>
-                <div className="text-muted text-xs sm:text-sm mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          {/* Stats row removed — will show real data when available */}
         </div>
       </section>
 
       {/* ════════ FLOW ════════ */}
-      <section className="bg-surface py-20 sm:py-28">
+      <section className="bg-surface backdrop-blur-md py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tu camino a la victoria</h2>
@@ -386,7 +376,7 @@ export default function Home() {
       </section>
 
       {/* ════════ TRUST ════════ */}
-      <section className="bg-surface py-20 sm:py-28">
+      <section className="bg-surface backdrop-blur-md py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tu competencia, protegida</h2>
@@ -475,7 +465,7 @@ export default function Home() {
       </section>
 
       {/* ════════ TOURNAMENTS PREVIEW ════════ */}
-      <section className="bg-surface py-20 sm:py-28">
+      <section className="bg-surface backdrop-blur-md py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Torneos Activos</h2>
