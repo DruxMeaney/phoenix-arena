@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "Phoenix Arena — Plataforma Competitiva de Habilidad",
+    title: "Phoenix Arena",
     description: "Donde la habilidad se convierte en premio. Retos 1v1, torneos y ranking profesional para jugadores de LATAM.",
     url: "https://phoenix-arena.vercel.app",
     siteName: "Phoenix Arena",
@@ -29,11 +29,17 @@ export const metadata: Metadata = {
         url: "https://phoenix-arena.vercel.app/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Phoenix Arena",
+        type: "image/jpeg",
+        alt: "Phoenix Arena — Plataforma Competitiva",
       },
     ],
     locale: "es_MX",
     type: "website",
+  },
+  other: {
+    "og:image:width": "1200",
+    "og:image:height": "630",
+    "og:image:type": "image/jpeg",
   },
   twitter: {
     card: "summary_large_image",
