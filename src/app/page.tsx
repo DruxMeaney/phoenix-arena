@@ -292,44 +292,56 @@ function tierBadge(tier: string) {
 export default function Home() {
   return (
     <div className="flex flex-col">
-      {/* ════════ HERO ════════ */}
-      <section className="bg-gradient-hero relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
-        {/* Decorative blurred circles */}
-        <div className="pointer-events-none absolute -left-32 top-20 h-[420px] w-[420px] rounded-full bg-red-500/[.08] blur-[120px]" />
-        <div className="pointer-events-none absolute -right-32 top-40 h-[380px] w-[380px] rounded-full bg-blue-500/[.06] blur-[120px]" />
+      {/* ════════ HERO — Minimal, Phoenix-centered ════════ */}
+      <section className="relative overflow-hidden min-h-[100dvh] flex flex-col items-center justify-center">
+        {/* Background glows */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/3 h-[600px] w-[600px] sm:h-[800px] sm:w-[800px] rounded-full bg-[#2d1b69]/20 blur-[150px]" />
+        <div className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 h-[400px] w-[90vw] bg-red-600/[.06] blur-[100px] rounded-full" />
 
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-          {/* Hero Logo */}
-          <div className="mb-10 animate-fade-up flex justify-center">
+        <div className="relative text-center px-4 sm:px-6 animate-fade-up">
+          {/* Giant Logo */}
+          <div className="mb-8 flex justify-center">
             <div className="relative">
-              <div className="absolute inset-0 rounded-3xl bg-[#2d1b69]/60 blur-2xl scale-110" />
-              <img src="/logo-color.png" alt="Phoenix Arena" className="relative h-48 sm:h-64 lg:h-80 drop-shadow-2xl rounded-2xl" style={{ background: "radial-gradient(circle, rgba(45,27,105,0.8) 0%, rgba(45,27,105,0.4) 60%, transparent 100%)" }} />
+              {/* Purple aura behind logo */}
+              <div className="absolute inset-0 scale-125 rounded-full bg-[#2d1b69]/40 blur-[60px]" />
+              <div className="absolute inset-0 scale-110 rounded-full bg-[#1a0f3d]/50 blur-[30px]" />
+              <img
+                src="/logo-color.png"
+                alt="Phoenix Arena"
+                className="relative w-64 sm:w-80 md:w-96 lg:w-[28rem] drop-shadow-2xl"
+                style={{ filter: "drop-shadow(0 0 40px rgba(45,27,105,0.5))" }}
+              />
             </div>
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl leading-tight animate-fade-up">
-            Compite. Demuestra tu <span className="text-gradient">Habilidad</span>. Gana.
+          {/* Tagline — clean and short */}
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+            Donde la <span className="text-gradient">habilidad</span> se convierte en premio
           </h1>
-          <p className="mt-6 mx-auto max-w-2xl text-lg text-muted leading-relaxed animate-fade-up" style={{ animationDelay: ".1s" }}>
-            La plataforma donde tu nivel de juego se traduce en premios reales. Retos 1v1, torneos y ranking profesional para jugadores de LATAM.
+          <p className="mt-5 mx-auto max-w-lg text-muted leading-relaxed animate-fade-up" style={{ animationDelay: ".1s" }}>
+            Plataforma competitiva para jugadores de LATAM. Retos 1v1, torneos y ranking profesional.
           </p>
 
+          {/* CTAs */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: ".2s" }}>
             <Link
               href="/registro"
-              className="bg-gradient-main text-white rounded-xl px-8 py-3.5 font-semibold text-base glow hover:opacity-90 transition-opacity"
+              className="bg-gradient-main text-white rounded-xl px-10 py-4 font-bold text-lg glow-strong hover:scale-105 transition-transform"
             >
-              Empieza a Competir
+              Competir Ahora
             </Link>
             <Link
               href="/como-funciona"
-              className="border border-border-light rounded-xl px-8 py-3.5 font-semibold text-base text-foreground hover:bg-surface-2 transition-colors"
+              className="border border-border-light/50 rounded-xl px-10 py-4 font-semibold text-base text-foreground/80 hover:text-foreground hover:border-border-light transition-colors"
             >
               Como Funciona
             </Link>
           </div>
+        </div>
 
-          {/* Stats row removed — will show real data when available */}
+        {/* Scroll hint */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-muted/30">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
         </div>
       </section>
 
@@ -404,61 +416,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ════════ RANKING PREVIEW ════════ */}
-      <section className="py-20 sm:py-28">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Ranking Phoenix Arena</h2>
-            <p className="mt-3 text-muted max-w-xl mx-auto">Los mejores jugadores de la plataforma. Compite para ver tu nombre aqui.</p>
+      {/* ════════ TIERS PREVIEW ════════ */}
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Sistema de Clasificacion</h2>
+            <p className="mt-2 text-muted text-sm">Sube de tier compitiendo. Tu nivel habla por ti.</p>
           </div>
-
-          {/* Table */}
-          <div className="bg-surface border border-border rounded-xl overflow-hidden mb-10">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-muted text-xs uppercase tracking-wider">
-                    <th className="text-left px-5 py-3.5 font-medium">#</th>
-                    <th className="text-left px-5 py-3.5 font-medium">Jugador</th>
-                    <th className="text-left px-5 py-3.5 font-medium">Tier</th>
-                    <th className="text-left px-5 py-3.5 font-medium">Score</th>
-                    <th className="text-left px-5 py-3.5 font-medium hidden sm:table-cell">Victorias</th>
-                    <th className="text-left px-5 py-3.5 font-medium hidden sm:table-cell">Partidas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankingData.map((p) => (
-                    <tr key={p.pos} className="border-b border-border/50 hover:bg-surface-2/50 transition-colors">
-                      <td className="px-5 py-4 font-medium text-muted">{p.pos}</td>
-                      <td className="px-5 py-4 font-semibold text-foreground">{p.name}</td>
-                      <td className="px-5 py-4">{tierBadge(p.tier)}</td>
-                      <td className="px-5 py-4 text-red-400 font-semibold">{p.score}</td>
-                      <td className="px-5 py-4 text-muted hidden sm:table-cell">{p.wins}</td>
-                      <td className="px-5 py-4 text-muted hidden sm:table-cell">{p.matches}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Tier explanation */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {tiers.map((t) => (
-              <div key={t.name} className="bg-surface border border-border rounded-xl p-5 text-center card-hover">
+              <div key={t.name} className="bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 text-center card-hover">
                 <div className="mb-2">{tierBadge(t.name)}</div>
-                <div className="text-xs text-muted mb-2">Score {t.range}</div>
-                <p className="text-muted text-sm leading-relaxed">{t.desc}</p>
+                <div className="text-xs text-muted mb-2">{t.range}</div>
+                <p className="text-muted text-xs leading-relaxed">{t.desc}</p>
               </div>
             ))}
           </div>
-
-          <div className="text-center">
-            <Link
-              href="/ranking"
-              className="border border-border-light rounded-xl px-8 py-3 font-semibold text-sm text-foreground hover:bg-surface-2 transition-colors inline-block"
-            >
-              Ver Ranking Completo
+          <div className="text-center mt-6">
+            <Link href="/ranking" className="text-sm text-muted hover:text-foreground transition-colors underline underline-offset-4">
+              Ver ranking completo
             </Link>
           </div>
         </div>

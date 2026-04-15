@@ -216,13 +216,19 @@ export function EmberEffect() {
         className="fixed inset-0 pointer-events-none z-0"
         style={{ mixBlendMode: "screen" }}
       />
-      {/* Logo 3 silhouette in bottom-left */}
-      <div className="fixed bottom-4 left-4 z-0 pointer-events-none opacity-20 sm:opacity-25">
+      {/* Logo 3 silhouette in bottom-left with radiant backlight */}
+      <div className="fixed bottom-6 left-6 z-0 pointer-events-none">
+        {/* Radiant backlight */}
+        <div className="absolute inset-0 -m-16 sm:-m-24">
+          <div className="absolute inset-0 rounded-full bg-red-600/20 blur-[60px] animate-pulse" />
+          <div className="absolute inset-0 rounded-full bg-[#2d1b69]/25 blur-[40px]" />
+          <div className="absolute inset-0 scale-75 rounded-full bg-orange-500/15 blur-[30px]" />
+        </div>
         <img
           src="/logo-silhouette.png"
           alt=""
-          className="w-32 sm:w-48 lg:w-56"
-          style={{ filter: "brightness(0.6) saturate(1.5)" }}
+          className="relative w-40 sm:w-56 lg:w-72 opacity-30 sm:opacity-40"
+          style={{ filter: "brightness(0.8) saturate(2) drop-shadow(0 0 20px rgba(220,38,38,0.4))" }}
         />
       </div>
     </>
