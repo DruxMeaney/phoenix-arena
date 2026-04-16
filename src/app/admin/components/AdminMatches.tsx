@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 const statusTabs = ["Todos", "open", "in_progress", "pending", "disputed", "resolved"];
 
 function statusLabel(s: string) {
@@ -51,7 +63,7 @@ export default function AdminMatches() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/admin/matches");
+      const res = await adminFetch("/api/admin/matches");
       if (!res.ok) throw new Error("Error al cargar partidas");
       const data = await res.json();
       setMatches(data.matches || data);
@@ -73,9 +85,8 @@ export default function AdminMatches() {
     try {
       setSaving(true);
       setMessage({ type: "", text: "" });
-      const res = await fetch("/api/admin/matches", {
+      const res = await adminFetch("/api/admin/matches", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...createForm,
           amount: Number(createForm.amount),
@@ -104,7 +115,6 @@ export default function AdminMatches() {
       const matchId = resolveMatch._id || resolveMatch.id;
       const res = await fetch(`/api/admin/matches`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: matchId,
           status: "resolved",

@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 const typeFilters = ["Todos", "match_win", "tournament_win", "purchase", "deposit", "level_up", "system"];
 
 function typeLabel(type: string) {
@@ -111,7 +123,7 @@ export default function AdminActivity() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/admin/activity");
+      const res = await adminFetch("/api/admin/activity");
       if (!res.ok) throw new Error("Error al cargar actividad");
       const data = await res.json();
       setEvents(data.events || data.activity || data);

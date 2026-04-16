@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 
 /** GET /api/admin/transactions — List all transactions with filters */
 export async function GET(request: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");

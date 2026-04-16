@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 interface Stats {
   matchesToday: number;
   matchesWeek: number;
@@ -98,7 +110,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/admin/stats");
+      const res = await adminFetch("/api/admin/stats");
       if (!res.ok) throw new Error("Error al cargar estadisticas");
       const data = await res.json();
       setStats(data);

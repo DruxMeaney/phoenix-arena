@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 
 /** GET /api/admin/store — List all store items (including inactive) */
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const items = await prisma.storeItem.findMany({ orderBy: { sortOrder: "asc" } });
   return NextResponse.json({ items });
@@ -13,8 +13,8 @@ export async function GET() {
 
 /** POST /api/admin/store — Create a new store item */
 export async function POST(request: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json();
   const { slug, type, name, description, price, credits, imageUrl, sortOrder } = body;
@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
 
 /** PUT /api/admin/store — Update a store item */
 export async function PUT(request: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json();
   const { id, ...updates } = body;
@@ -70,8 +70,8 @@ export async function PUT(request: NextRequest) {
 
 /** DELETE /api/admin/store — Soft-delete (deactivate) a store item */
 export async function DELETE(request: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");

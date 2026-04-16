@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 
 /** GET /api/admin/stats — Dashboard metrics for admin panel */
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") {
+  const user = await getAdminUser();
+  if (!user) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 

@@ -2,14 +2,33 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 type ViewMode = "list" | "form";
 
 const typeOptions = [
   { value: "credit_pack", label: "Pack de Creditos" },
   { value: "name_change", label: "Cambio de Nombre" },
   { value: "record_reset", label: "Reset de Record" },
-  { value: "badge", label: "Badge" },
-  { value: "title", label: "Titulo" },
+  { value: "badge", label: "Insignia / Badge" },
+  { value: "title", label: "Titulo Especial" },
+  { value: "skin", label: "Skin / Tema" },
+  { value: "avatar_frame", label: "Marco de Avatar" },
+  { value: "banner", label: "Banner de Perfil" },
+  { value: "boost_xp", label: "Boost de XP" },
+  { value: "tournament_pass", label: "Pase de Torneo" },
+  { value: "vip_membership", label: "Membresia VIP" },
+  { value: "emote", label: "Emote / Animacion" },
 ];
 
 const emptyForm = {
@@ -37,7 +56,7 @@ export default function AdminStore() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/admin/store");
+      const res = await adminFetch("/api/admin/store");
       if (!res.ok) throw new Error("Error al cargar productos");
       const data = await res.json();
       setItems(data.items || data);
@@ -66,9 +85,8 @@ export default function AdminStore() {
         ...(isEdit ? { id: editingItem._id || editingItem.id } : {}),
       };
 
-      const res = await fetch("/api/admin/store", {
+      const res = await adminFetch("/api/admin/store", {
         method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -91,9 +109,8 @@ export default function AdminStore() {
 
   const toggleActive = async (item: any) => {
     try {
-      const res = await fetch("/api/admin/store", {
+      const res = await adminFetch("/api/admin/store", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: item._id || item.id,
           isActive: !item.isActive,

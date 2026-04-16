@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 
 /** GET /api/admin/tournaments — List all tournaments with full details */
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const tournaments = await prisma.tournament.findMany({
     include: {
@@ -25,8 +25,8 @@ export async function GET() {
 
 /** POST /api/admin/tournaments — Create a tournament */
 export async function POST(request: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json();
   const { name, game, format, tournamentType, entryFee, maxSlots, startDate, description, rules } = body;
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
 
 /** PUT /api/admin/tournaments — Update a tournament */
 export async function PUT(request: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json();
   const { id, ...updates } = body;

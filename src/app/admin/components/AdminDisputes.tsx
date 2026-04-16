@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 export default function AdminDisputes() {
   const [disputes, setDisputes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +29,7 @@ export default function AdminDisputes() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/disputes");
+      const res = await adminFetch("/api/disputes");
       if (!res.ok) throw new Error("Error al cargar disputas");
       const data = await res.json();
       setDisputes(data.disputes || data);
@@ -41,9 +53,8 @@ export default function AdminDisputes() {
       setSaving(true);
       setMessage({ type: "", text: "" });
       const disputeId = dispute._id || dispute.id;
-      const res = await fetch("/api/disputes", {
+      const res = await adminFetch("/api/disputes", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: disputeId,
           winnerId: selectedWinner,

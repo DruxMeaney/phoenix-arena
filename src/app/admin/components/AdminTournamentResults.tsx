@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 interface PlayerResult {
   userId: string;
   username: string;
@@ -86,9 +98,8 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
       setSaving(true);
       setMessage({ type: "", text: "" });
       const tournamentId = tournament._id || tournament.id;
-      const res = await fetch(`/api/admin/tournaments/${tournamentId}/results`, {
+      const res = await adminFetch(`/api/admin/tournaments/${tournamentId}/results`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           results: results.map((r) => ({
             userId: r.userId,

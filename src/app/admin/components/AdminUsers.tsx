@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 type FilterMode = "todos" | "activos" | "flagged";
 
 function tierBadgeClass(tier: string) {
@@ -36,7 +48,7 @@ export default function AdminUsers() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/admin/users");
+      const res = await adminFetch("/api/admin/users");
       if (!res.ok) throw new Error("Error al cargar usuarios");
       const data = await res.json();
       setUsers(data.users || data);
@@ -65,7 +77,7 @@ export default function AdminUsers() {
       setEditing(false);
       setMessage({ type: "", text: "" });
       const userId = user._id || user.id;
-      const res = await fetch(`/api/admin/users/${userId}`);
+      const res = await adminFetch(`/api/admin/users/${userId}`);
       if (res.ok) {
         const detail = await res.json();
         setSelectedUser(detail.user || detail);
@@ -94,9 +106,8 @@ export default function AdminUsers() {
     try {
       setSaving(true);
       setMessage({ type: "", text: "" });
-      const res = await fetch("/api/admin/users", {
+      const res = await adminFetch("/api/admin/users", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: selectedUser._id || selectedUser.id,
           ...editForm,

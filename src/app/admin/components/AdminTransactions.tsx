@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+function adminFetch(url: string, options: RequestInit = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-password": pass,
+      ...(options.headers || {}),
+    },
+  });
+}
+
 const typeFilters = [
   "Todos",
   "deposit",
@@ -75,7 +87,7 @@ export default function AdminTransactions() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/admin/transactions");
+      const res = await adminFetch("/api/admin/transactions");
       if (!res.ok) throw new Error("Error al cargar transacciones");
       const data = await res.json();
       const txList = data.transactions || data;
