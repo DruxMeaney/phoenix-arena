@@ -52,6 +52,8 @@ model User {
   feedEvents         FeedEvent[]
   purchases          Purchase[]
   profilePosts       ProfilePost[]
+  tournamentResults  TournamentResult[]
+  createdTournaments Tournament[]         @relation("TournamentCreator")
 }
 
 // ── Profile Posts (Player Blog/Feed) ─────────────────────────────
@@ -160,29 +162,38 @@ model Dispute {
 
 // ── Tournaments ──────────────────────────────────────────────────
 model Tournament {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
-  game           String   @default("Warzone")
+  game           String    @default("Warzone")
   format         String
-  tournamentType String   @default("detri")
+  tournamentType String    @default("detri")
   entryFee       Float
-  prizePool      Float    @default(0)
+  prizePool      Float     @default(0)
   maxSlots       Int
-  filledSlots    Int      @default(0)
-  status         String   @default("registration")
+  filledSlots    Int       @default(0)
+  status         String    @default("registration")
+  description    String?
+  rules          String?
+  evidenceUrl    String?
+  createdById    String?
   startDate      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  creator        User?              @relation("TournamentCreator", fields: [createdById], references: [id])
   entries        TournamentEntry[]
+  results        TournamentResult[]
 }
 
 model TournamentEntry {
-  id           String   @id @default(cuid())
-  tournamentId String
-  userId       String
-  placement    Int?
-  joinedAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  tournamentId    String
+  userId          String
+  placement       Int?
+  paidAmount      Float?
+  discountAmount  Float    @default(0)
+  joinedAt        DateTime @default(now())
 
   tournament   Tournament @relation(fields: [tournamentId], references: [id])
   user         User       @relation(fields: [userId], references: [id])
@@ -194,6 +205,7 @@ model TournamentEntry {
 model RankingMatchRecord {
   id                         String   @id @default(cuid())
   playerId                   String
+  tournamentId               String?
   tournamentType             String
   date                       DateTime @default(now())
   kills                      Int      @default(0)
@@ -274,4 +286,41 @@ model LadderEntry {
   season      LadderSeason @relation(fields: [seasonId], references: [id])
 
   @@unique([seasonId, userId])
+}
+
+// ── Tournament Results (Admin-captured per-player data) ─────────
+model TournamentResult {
+  id            String   @id @default(cuid())
+  tournamentId  String
+  userId        String
+  kills         Int      @default(0)
+  deaths        Int      @default(0)
+  placement     Int      @default(0)
+  teamKills     Int      @default(0)
+  teamPoints    Float    @default(0)
+  evidenceUrl   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+}
+
+// ── Store Items (Dynamic product catalog) ────────────────────────
+model StoreItem {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  type        String   // credit_pack, name_change, record_reset, badge, title
+  name        String
+  description String
+  price       Float
+  credits     Int      @default(0)
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
