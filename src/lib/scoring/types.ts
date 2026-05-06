@@ -2,7 +2,7 @@
 
 export type TournamentType = "detri" | "skills" | "evento" | "mixto" | "novice";
 export type Tier = "PRO" | "AM" | "Detri";
-export type ScoringPhase = "simple" | "full";
+export type ScoringPhase = "simple" | "full" | "psr";
 
 /** A single match/tournament participation record. */
 export interface MatchRecord {
