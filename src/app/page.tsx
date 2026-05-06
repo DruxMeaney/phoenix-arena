@@ -332,7 +332,7 @@ export default function Home() {
             </Link>
             <Link
               href="/como-funciona"
-              className="border border-border-light/50 rounded-xl px-10 py-4 font-semibold text-base text-foreground/80 hover:text-foreground hover:border-border-light transition-colors"
+              className="btn-secondary-brand rounded-xl px-10 py-4 font-semibold text-base"
             >
               Como Funciona
             </Link>
