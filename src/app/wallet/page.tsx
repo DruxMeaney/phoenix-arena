@@ -34,33 +34,31 @@ const IconX = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 );
 
-/* ── Data ─────────────────────────────────────────────────────── */
-type TxType = "Deposito" | "Retiro" | "Reto" | "Comision";
-type TxStatus = "Completado" | "Procesando" | "Fallido";
-
-interface Transaction {
-  fecha: string;
-  tipo: TxType;
-  descripcion: string;
-  monto: string;
-  estado: TxStatus;
-}
-
-const transactions: Transaction[] = [];
-
 const predefinedAmounts = [5, 10, 20, 50, 100];
 
-const typeColor: Record<TxType, string> = {
-  Deposito: "text-blue-500",
-  Retiro: "text-red-500",
-  Reto: "text-blue-400",
-  Comision: "text-muted",
+type WalletTransaction = {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  status: string;
+  createdAt: string;
 };
 
-const statusConfig: Record<TxStatus, { color: string; icon: React.ReactNode }> = {
-  Completado: { color: "text-success", icon: <IconCheck /> },
-  Procesando: { color: "text-warning", icon: <IconClock /> },
-  Fallido: { color: "text-red-500", icon: <IconX /> },
+type WalletSnapshot = {
+  balance: number;
+  heldBalance: number;
+  transactions?: WalletTransaction[];
+};
+
+const readWallet = async (): Promise<WalletSnapshot | null> => {
+  try {
+    const res = await fetch("/api/wallet");
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 };
 
 /* ── Component ────────────────────────────────────────────────── */
@@ -71,26 +69,37 @@ export default function WalletPage() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [balance, setBalance] = useState(0);
   const [heldBalance, setHeldBalance] = useState(0);
-  const [txList, setTxList] = useState<{ id: string; type: string; amount: number; description: string; status: string; createdAt: string }[]>([]);
+  const [txList, setTxList] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchWallet = useCallback(async () => {
-    try {
-      const res = await fetch("/api/wallet");
-      if (res.ok) {
-        const data = await res.json();
+    const data = await readWallet();
+    if (data) {
+      setBalance(data.balance);
+      setHeldBalance(data.heldBalance);
+      setTxList(data.transactions || []);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    readWallet().then((data) => {
+      if (cancelled) return;
+      if (data) {
         setBalance(data.balance);
         setHeldBalance(data.heldBalance);
         setTxList(data.transactions || []);
       }
-    } catch { /* ignore */ }
-    setLoading(false);
-  }, []);
+      setLoading(false);
+    });
 
-  useEffect(() => { fetchWallet(); }, [fetchWallet]);
+    return () => { cancelled = true; };
+  }, []);
 
   const handleDeposit = async () => {
     const amt = selectedAmount || parseFloat(customAmount);
@@ -202,7 +211,7 @@ export default function WalletPage() {
               onClick={() => setActiveTab("retirar")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === "retirar"
-                  ? "bg-gradient-main text-white shadow-lg"
+                  ? "bg-gradient-blue text-white shadow-lg"
                   : "bg-surface-2 border border-border text-foreground hover:border-blue-500"
               }`}
             >
@@ -350,7 +359,7 @@ export default function WalletPage() {
             <button
               onClick={handleWithdraw}
               disabled={withdrawLoading || !withdrawAmount}
-              className="w-full py-3.5 bg-gradient-main text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
+              className="w-full py-3.5 bg-gradient-blue text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
             >
               {withdrawLoading ? "Procesando..." : "Solicitar Retiro"}
             </button>

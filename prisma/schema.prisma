@@ -9,34 +9,41 @@ datasource db {
 
 // ── Users ────────────────────────────────────────────────────────
 model User {
-  id            String   @id @default(cuid())
-  username      String   @unique
-  email         String?  @unique
-  passwordHash  String?
-  avatar        String?
-  banner        String?  // profile banner/background image URL
-  bio           String?  // short bio text
-  socialTwitter String?
-  socialYoutube String?
-  socialTwitch  String?
-  favoriteGame  String?
-  favoriteWeapon String?
-  motto         String?  // personal motto/tagline
-  profileTheme  String   @default("neon-blue") // neon-blue, neon-red, neon-purple, ember
-  region        String   @default("latam-norte")
-  activisionId  String?
-  platform      String   @default("uno")
-  discordId     String?  @unique
-  role          String   @default("player")
-  status        String   @default("active")
-  tier          String   @default("Detri")
-  peakScore     Float    @default(0)
-  trustScore    Float    @default(0)
-  trustLevel    String   @default("restricted") // restricted, monitored, full, verified
-  isFlagged     Boolean  @default(false)
-  lastSeen      DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String    @id @default(cuid())
+  username        String    @unique
+  email           String?   @unique
+  passwordHash    String?
+  avatar          String?
+  banner          String? // profile banner/background image URL
+  bio             String? // short bio text
+  socialTwitter   String?
+  socialYoutube   String?
+  socialTwitch    String?
+  favoriteGame    String?
+  favoriteWeapon  String?
+  motto           String? // personal motto/tagline
+  profileTheme    String    @default("neon-blue") // neon-blue, neon-red, neon-purple, ember
+  region          String    @default("latam-norte")
+  activisionId    String?
+  platform        String    @default("uno")
+  discordId       String?   @unique
+  role            String    @default("player")
+  status          String    @default("active")
+  tier            String    @default("Detri")
+  peakScore       Float     @default(0)
+  psrMu           Float     @default(25)
+  psrSigma        Float     @default(8.333333333333334)
+  psrScore        Float     @default(0)
+  psrMatches      Int       @default(0)
+  peakPsr         Float     @default(0)
+  psrModelVersion String    @default("psr-0.1-draft")
+  psrLastEventAt  DateTime?
+  trustScore      Float     @default(0)
+  trustLevel      String    @default("restricted") // restricted, monitored, full, verified
+  isFlagged       Boolean   @default(false)
+  lastSeen        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   wallet             Wallet?
   createdChallenges  Match[]              @relation("MatchCreator")
@@ -46,38 +53,40 @@ model User {
   disputesAsResolved Dispute[]            @relation("DisputeResolver")
   tournamentEntries  TournamentEntry[]
   matchRecords       RankingMatchRecord[]
-  xp                 Int      @default(0)
-  seasonXp           Int      @default(0)
+  xp                 Int                  @default(0)
+  seasonXp           Int                  @default(0)
   vaultItems         VaultItem[]
   feedEvents         FeedEvent[]
   purchases          Purchase[]
   profilePosts       ProfilePost[]
   tournamentResults  TournamentResult[]
   createdTournaments Tournament[]         @relation("TournamentCreator")
+  rankingDeltas      RankingDelta[]
+  rankingSnapshots   RankingSnapshot[]
 }
 
 // ── Profile Posts (Player Blog/Feed) ─────────────────────────────
 model ProfilePost {
-  id          String   @id @default(cuid())
-  userId      String
-  content     String
-  imageUrl    String?
-  postType    String   @default("update") // update, achievement, highlight, setup
-  likes       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  imageUrl  String?
+  postType  String   @default("update") // update, achievement, highlight, setup
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ── Wallet ───────────────────────────────────────────────────────
 model Wallet {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  balance      Float    @default(0)
-  heldBalance  Float    @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  balance     Float    @default(0)
+  heldBalance Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
@@ -93,20 +102,20 @@ model Transaction {
   reference   String?
   createdAt   DateTime @default(now())
 
-  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
 }
 
 // ── Matches (Retos) ──────────────────────────────────────────────
 model Match {
-  id          String   @id @default(cuid())
-  creatorId   String
-  game        String   @default("Warzone")
-  modalidad   String
-  amount      Float
-  rules       String
-  status      String   @default("open")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  creatorId String
+  game      String   @default("Warzone")
+  modalidad String
+  amount    Float
+  rules     String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   creator      User               @relation("MatchCreator", fields: [creatorId], references: [id])
   participants MatchParticipant[]
@@ -115,49 +124,49 @@ model Match {
 }
 
 model MatchParticipant {
-  id        String   @id @default(cuid())
-  matchId   String
-  userId    String
-  team      Int      @default(1)
-  joinedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  matchId  String
+  userId   String
+  team     Int      @default(1)
+  joinedAt DateTime @default(now())
 
-  match     Match    @relation(fields: [matchId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
 
   @@unique([matchId, userId])
 }
 
 // ── Results ──────────────────────────────────────────────────────
 model Result {
-  id           String   @id @default(cuid())
-  matchId      String   @unique
-  reporterId   String
-  winnerId     String?
-  evidenceUrl  String?
-  status       String   @default("pending")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  matchId     String   @unique
+  reporterId  String
+  winnerId    String?
+  evidenceUrl String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  match        Match    @relation(fields: [matchId], references: [id])
-  reporter     User     @relation(fields: [reporterId], references: [id])
+  match    Match @relation(fields: [matchId], references: [id])
+  reporter User  @relation(fields: [reporterId], references: [id])
 }
 
 // ── Disputes ─────────────────────────────────────────────────────
 model Dispute {
-  id            String    @id @default(cuid())
-  matchId       String    @unique
-  reporterId    String
-  resolverId    String?
-  reason        String
-  evidenceUrl   String?
-  resolution    String?
-  resolvedAt    DateTime?
-  status        String    @default("open")
-  createdAt     DateTime  @default(now())
+  id          String    @id @default(cuid())
+  matchId     String    @unique
+  reporterId  String
+  resolverId  String?
+  reason      String
+  evidenceUrl String?
+  resolution  String?
+  resolvedAt  DateTime?
+  status      String    @default("open")
+  createdAt   DateTime  @default(now())
 
-  match         Match     @relation(fields: [matchId], references: [id])
-  reporter      User      @relation("DisputeReporter", fields: [reporterId], references: [id])
-  resolver      User?     @relation("DisputeResolver", fields: [resolverId], references: [id])
+  match    Match @relation(fields: [matchId], references: [id])
+  reporter User  @relation("DisputeReporter", fields: [reporterId], references: [id])
+  resolver User? @relation("DisputeResolver", fields: [resolverId], references: [id])
 }
 
 // ── Tournaments ──────────────────────────────────────────────────
@@ -181,130 +190,228 @@ model Tournament {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  creator        User?              @relation("TournamentCreator", fields: [createdById], references: [id])
-  entries        TournamentEntry[]
-  results        TournamentResult[]
+  creator User?              @relation("TournamentCreator", fields: [createdById], references: [id])
+  entries TournamentEntry[]
+  results TournamentResult[]
 }
 
 model TournamentEntry {
-  id              String   @id @default(cuid())
-  tournamentId    String
-  userId          String
-  placement       Int?
-  paidAmount      Float?
-  discountAmount  Float    @default(0)
-  joinedAt        DateTime @default(now())
+  id             String   @id @default(cuid())
+  tournamentId   String
+  userId         String
+  placement      Int?
+  paidAmount     Float?
+  discountAmount Float    @default(0)
+  joinedAt       DateTime @default(now())
 
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
 
   @@unique([tournamentId, userId])
 }
 
 // ── Ranking Records ──────────────────────────────────────────────
 model RankingMatchRecord {
-  id                         String   @id @default(cuid())
+  id                         String    @id @default(cuid())
   playerId                   String
   tournamentId               String?
+  eventId                    String?
+  seasonId                   String    @default("global")
+  sourceType                 String    @default("manual")
+  sourceId                   String?
+  evidenceUrl                String?
+  verified                   Boolean   @default(false)
+  modelVersion               String    @default("psr-0.1-draft")
+  psrProcessedAt             DateTime?
   tournamentType             String
-  date                       DateTime @default(now())
-  kills                      Int      @default(0)
-  deaths                     Int      @default(0)
-  position                   Int      @default(1)
-  totalTeams                 Int      @default(1)
-  teamKills                  Int      @default(0)
-  teamPoints                 Float    @default(0)
-  bestKillsInTournament      Int      @default(0)
-  bestTeamPointsInTournament Float    @default(0)
+  date                       DateTime  @default(now())
+  kills                      Int       @default(0)
+  deaths                     Int       @default(0)
+  position                   Int       @default(1)
+  totalTeams                 Int       @default(1)
+  teamKills                  Int       @default(0)
+  teamPoints                 Float     @default(0)
+  bestKillsInTournament      Int       @default(0)
+  bestTeamPointsInTournament Float     @default(0)
 
-  player                     User     @relation(fields: [playerId], references: [id])
+  player User @relation(fields: [playerId], references: [id])
+
+  @@index([tournamentId])
+  @@index([eventId])
+  @@index([seasonId, modelVersion])
+  @@index([playerId, date])
+}
+
+// ── Auditable Phoenix Skill Rating (PSR) ─────────────────────────
+model RankingModelVersion {
+  id          String    @id @default(cuid())
+  version     String    @unique
+  status      String    @default("shadow") // draft, shadow, active, retired
+  description String
+  parameters  String // JSON
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model RankingEventLog {
+  id           String   @id @default(cuid())
+  sourceType   String
+  sourceId     String
+  seasonId     String   @default("global")
+  tournamentId String?
+  matchId      String?
+  modelVersion String
+  status       String   @default("processed")
+  occurredAt   DateTime @default(now())
+  payload      String // JSON input event
+  evidenceUrl  String?
+  resultHash   String
+  createdAt    DateTime @default(now())
+
+  deltas RankingDelta[]
+
+  @@unique([sourceType, sourceId, modelVersion])
+  @@index([seasonId, modelVersion])
+  @@index([occurredAt])
+}
+
+model RankingDelta {
+  id                String   @id @default(cuid())
+  eventLogId        String
+  playerId          String
+  modelVersion      String
+  muBefore          Float
+  sigmaBefore       Float
+  psrBefore         Float
+  muAfter           Float
+  sigmaAfter        Float
+  psrAfter          Float
+  deltaPsr          Float
+  placement         Int
+  kills             Int      @default(0)
+  lobbyStrength     Float    @default(1)
+  performanceSignal Float    @default(0)
+  explanation       String // JSON
+  createdAt         DateTime @default(now())
+
+  eventLog RankingEventLog @relation(fields: [eventLogId], references: [id], onDelete: Cascade)
+  player   User            @relation(fields: [playerId], references: [id])
+
+  @@unique([eventLogId, playerId])
+  @@index([playerId, createdAt])
+  @@index([modelVersion])
+}
+
+model RankingSnapshot {
+  id              String   @id @default(cuid())
+  playerId        String
+  modelVersion    String
+  seasonId        String   @default("global")
+  rank            Int
+  tier            String
+  mu              Float
+  sigma           Float
+  psr             Float
+  percentile      Float
+  matchesPlayed   Int
+  isCalibrating   Boolean  @default(false)
+  isDecaying      Boolean  @default(false)
+  decayMultiplier Float    @default(1)
+  sourceHash      String
+  snapshotAt      DateTime @default(now())
+
+  player User @relation(fields: [playerId], references: [id])
+
+  @@index([seasonId, modelVersion, snapshotAt])
+  @@index([playerId, snapshotAt])
 }
 
 // ── Pulse Feed (Activity Timeline) ───────────────────────────────
 model FeedEvent {
   id          String   @id @default(cuid())
   userId      String?
-  type        String   // match_win, match_loss, tournament_join, tournament_win, deposit, level_up, achievement, system
+  type        String // match_win, match_loss, tournament_join, tournament_win, deposit, level_up, achievement, system
   title       String
   description String
-  metadata    String?  // JSON string for extra data
+  metadata    String? // JSON string for extra data
   createdAt   DateTime @default(now())
 
-  user        User?    @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
 }
 
 // ── Phoenix Vault (Player Inventory) ─────────────────────────────
 model VaultItem {
-  id          String   @id @default(cuid())
-  userId      String
-  itemType    String   // credit_pack, name_change, record_reset, badge, title
-  itemName    String
-  quantity    Int      @default(1)
-  used        Boolean  @default(false)
-  usedAt      DateTime?
-  acquiredAt  DateTime @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  itemType   String // credit_pack, name_change, record_reset, badge, title
+  itemName   String
+  quantity   Int       @default(1)
+  used       Boolean   @default(false)
+  usedAt     DateTime?
+  acquiredAt DateTime  @default(now())
 
-  user        User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ── Store Purchases ──────────────────────────────────────────────
 model Purchase {
-  id          String   @id @default(cuid())
-  userId      String
-  itemType    String
-  itemName    String
-  price       Float
-  credits     Int      @default(0) // credits granted (for credit packs)
-  status      String   @default("completed")
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  itemType  String
+  itemName  String
+  price     Float
+  credits   Int      @default(0) // credits granted (for credit packs)
+  status    String   @default("completed")
+  createdAt DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ── Arena Ladder (Weekly XP Leaderboard) ─────────────────────────
 model LadderSeason {
-  id          String   @id @default(cuid())
-  name        String
-  startDate   DateTime
-  endDate     DateTime
-  status      String   @default("active") // active, finished
-  prizePool   Float    @default(0)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("active") // active, finished
+  prizePool Float    @default(0)
+  createdAt DateTime @default(now())
 
-  entries     LadderEntry[]
+  entries LadderEntry[]
 }
 
 model LadderEntry {
-  id          String   @id @default(cuid())
-  seasonId    String
-  userId      String
-  xp          Int      @default(0)
+  id            String @id @default(cuid())
+  seasonId      String
+  userId        String
+  xp            Int    @default(0)
   matchesPlayed Int    @default(0)
-  wins        Int      @default(0)
-  rank        Int?
+  wins          Int    @default(0)
+  rank          Int?
 
-  season      LadderSeason @relation(fields: [seasonId], references: [id])
+  season LadderSeason @relation(fields: [seasonId], references: [id])
 
   @@unique([seasonId, userId])
 }
 
 // ── Tournament Results (Admin-captured per-player data) ─────────
 model TournamentResult {
-  id            String   @id @default(cuid())
-  tournamentId  String
-  userId        String
-  kills         Int      @default(0)
-  deaths        Int      @default(0)
-  placement     Int      @default(0)
-  teamKills     Int      @default(0)
-  teamPoints    Float    @default(0)
-  evidenceUrl   String?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  kills        Int      @default(0)
+  deaths       Int      @default(0)
+  placement    Int      @default(0)
+  teamKills    Int      @default(0)
+  teamPoints   Float    @default(0)
+  evidenceUrl  String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  tournament    Tournament @relation(fields: [tournamentId], references: [id])
-  user          User       @relation(fields: [userId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
 
   @@unique([tournamentId, userId])
 }
@@ -313,7 +420,7 @@ model TournamentResult {
 model StoreItem {
   id          String   @id @default(cuid())
   slug        String   @unique
-  type        String   // credit_pack, name_change, record_reset, badge, title
+  type        String // credit_pack, name_change, record_reset, badge, title
   name        String
   description String
   price       Float

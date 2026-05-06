@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { rebuildAndPersistPsrRankings } from "@/lib/ranking/psr-service";
+import { PSR_MODEL_VERSION } from "@/lib/scoring";
 
 /** POST /api/matches/[id]/result — Report match result */
 export async function POST(
@@ -61,6 +63,9 @@ export async function PUT(
   });
 
   if (!match?.result) return NextResponse.json({ error: "No hay resultado para confirmar" }, { status: 404 });
+  if (match.result.status !== "pending") {
+    return NextResponse.json({ error: "El resultado ya fue procesado" }, { status: 400 });
+  }
   if (match.result.reporterId === user.id) return NextResponse.json({ error: "No puedes confirmar tu propio reporte" }, { status: 400 });
 
   if (action === "confirm") {
@@ -101,6 +106,38 @@ export async function PUT(
 
     await prisma.result.update({ where: { id: match.result.id }, data: { status: "confirmed" } });
     await prisma.match.update({ where: { id: match.id }, data: { status: "confirmed" } });
+
+    try {
+      await prisma.rankingMatchRecord.createMany({
+        data: match.participants.map((participant) => {
+          const isWinner = participant.userId === winnerId;
+          return {
+            playerId: participant.userId,
+            eventId: match.id,
+            seasonId: "global",
+            sourceType: "quickmatch",
+            sourceId: match.result!.id,
+            evidenceUrl: match.result!.evidenceUrl,
+            verified: true,
+            modelVersion: PSR_MODEL_VERSION,
+            tournamentType: "detri",
+            date: new Date(),
+            kills: 0,
+            deaths: 0,
+            position: isWinner ? 1 : playersCount,
+            totalTeams: playersCount,
+            teamKills: 0,
+            teamPoints: isWinner ? 1 : 0,
+            bestKillsInTournament: 0,
+            bestTeamPointsInTournament: 1,
+          };
+        }),
+      });
+
+      await rebuildAndPersistPsrRankings();
+    } catch (error) {
+      console.error("Unable to persist PSR event for confirmed match", error);
+    }
 
     return NextResponse.json({ message: "Resultado confirmado. Premio pagado.", prize });
   }
