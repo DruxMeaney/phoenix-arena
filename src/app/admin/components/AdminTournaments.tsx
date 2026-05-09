@@ -80,7 +80,7 @@ const PRIZE_DISTRIBUTION = [
   { value: "winner_takes_all", label: "Winner Takes All" },
   { value: "top_3", label: "Top 3 (60/25/15)" },
   { value: "top_5", label: "Top 5 (40/25/15/12/8)" },
-  { value: "top_8", label: "Top 8" },
+  { value: "top_8", label: "Top 8 (40/22/13/8/7/5/3/2)" },
   { value: "custom", label: "Personalizado" },
 ];
 
@@ -125,6 +125,7 @@ const emptyForm = {
   rules: "",
   region: "latam-norte",
   prizeDistribution: "winner_takes_all",
+  customPrizeSplits: "",
   minTrustScore: "0",
   status: "registration",
   streamUrl: "",
@@ -179,6 +180,8 @@ export default function AdminTournaments() {
           startDate: form.startDate || null,
           description: form.description,
           rules: form.rules,
+          prizeDistribution: form.prizeDistribution,
+          customPrizeSplits: form.prizeDistribution === "custom" ? form.customPrizeSplits : null,
         }),
       });
       if (!res.ok) {
@@ -216,6 +219,8 @@ export default function AdminTournaments() {
           description: form.description,
           rules: form.rules,
           status: form.status,
+          prizeDistribution: form.prizeDistribution,
+          customPrizeSplits: form.prizeDistribution === "custom" ? form.customPrizeSplits : null,
         }),
       });
       if (!res.ok) {
@@ -240,6 +245,36 @@ export default function AdminTournaments() {
     setMessage({ type: "", text: "" });
   };
 
+  const handleCancel = async () => {
+    if (!selectedTournament) return;
+    const reason = window.prompt(
+      `Cancelar "${selectedTournament.name}"? Se reembolsaran ${(selectedTournament.entries || []).length} entradas. Razon (opcional):`,
+      "",
+    );
+    // Distinguish "Cancel button on prompt" (null) from "no reason given" (empty string).
+    if (reason === null) return;
+    try {
+      setSaving(true);
+      setMessage({ type: "", text: "" });
+      const res = await adminFetch(`/api/admin/tournaments/${selectedTournament.id}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Error al cancelar torneo");
+      setMessage({ type: "success", text: data.message || "Torneo cancelado" });
+      // Refresh list and the currently-open tournament.
+      await fetchTournaments();
+      const refreshed = await adminFetch("/api/admin/tournaments").then((r) => r.json()).catch(() => null);
+      const updated = refreshed?.tournaments?.find((t: any) => t.id === selectedTournament.id);
+      if (updated) setSelectedTournament(updated);
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const startEdit = () => {
     if (!selectedTournament) return;
     setForm({
@@ -253,7 +288,8 @@ export default function AdminTournaments() {
       description: selectedTournament.description || "",
       rules: selectedTournament.rules || "",
       region: "latam-norte",
-      prizeDistribution: "winner_takes_all",
+      prizeDistribution: selectedTournament.prizeDistribution || "winner_takes_all",
+      customPrizeSplits: selectedTournament.customPrizeSplits || "",
       minTrustScore: "0",
       status: selectedTournament.status || "registration",
       streamUrl: "",
@@ -459,6 +495,16 @@ export default function AdminTournaments() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
             Editar Torneo
           </button>
+          {t.status !== "cancelled" && t.status !== "finished" && (
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-sm font-semibold hover:bg-red-500/20 transition-colors disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              Cancelar Torneo (reembolsa entradas)
+            </button>
+          )}
         </div>
       </div>
     );
@@ -678,7 +724,21 @@ function renderForm(
             <select value={form.prizeDistribution} onChange={(e) => setForm({ ...form, prizeDistribution: e.target.value })} className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-red-500">
               {PRIZE_DISTRIBUTION.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
+            <p className="text-[10px] text-muted/60 mt-1">Plataforma retiene 10% comision; el resto se reparte segun la distribucion.</p>
           </div>
+          {form.prizeDistribution === "custom" && (
+            <div className="sm:col-span-2 lg:col-span-3">
+              <label className="block text-xs text-muted uppercase tracking-wider mb-1.5">Porcentajes Personalizados (deben sumar 100)</label>
+              <input
+                type="text"
+                value={form.customPrizeSplits}
+                onChange={(e) => setForm({ ...form, customPrizeSplits: e.target.value })}
+                placeholder='[50, 30, 20]'
+                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-red-500 transition-colors font-mono"
+              />
+              <p className="text-[10px] text-muted/60 mt-1">JSON array, ej: <code>[50,30,20]</code> = 50% al 1°, 30% al 2°, 20% al 3°.</p>
+            </div>
+          )}
         </div>
       </div>
 

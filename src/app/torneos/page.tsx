@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { resolvePrizeSplits } from "@/lib/prize-splits";
 
 /* ───── SVG Icons ───── */
 function TrophyIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -49,15 +50,6 @@ function ClockIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-function CalendarIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
 function ChevronRightIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -85,11 +77,28 @@ function CheckCircleIcon({ className = "h-4 w-4" }: { className?: string }) {
 /* ───── Data ───── */
 type Tab = "activos" | "proximos" | "finalizados" | "rapida";
 
-const activeTournaments: { id: number; name: string; badge: "all" | "pro" | "detri"; badgeLabel: string; game: string; format: string; teams: number; totalSlots: number; filledSlots: number; entryFee: number; prizePool: number; distribution: number[]; status: "en_curso" | "registro"; startDate: string }[] = [];
+type TournamentEntryDTO = {
+  userId: string;
+  paidAmount: number | null;
+  user?: { id: string; username: string; avatar: string | null; tier: string };
+};
 
-const upcomingTournaments: { id: number; name: string; game: string; format: string; entryFee: number; prizePool: number; startDate: string; slots: string }[] = [];
-
-const finishedTournaments: { id: number; name: string; game: string; winner: string; prize: string; date: string; participants: number }[] = [];
+type TournamentDTO = {
+  id: string;
+  name: string;
+  game: string;
+  format: string;
+  tournamentType: string;
+  entryFee: number;
+  prizePool: number;
+  maxSlots: number;
+  filledSlots: number;
+  status: string; // registration | check_in | in_progress | paused | finished | cancelled
+  startDate: string | null;
+  prizeDistribution: string;
+  customPrizeSplits: string | null;
+  entries: TournamentEntryDTO[];
+};
 
 const bracketData = {
   round1: [] as { a: string; b: string; winner: string }[],
@@ -107,16 +116,40 @@ const howItWorksSteps = [
 ];
 
 /* ───── Helpers ───── */
-function badgeClass(badge: "all" | "pro" | "detri") {
-  if (badge === "pro") return "badge-pro";
-  if (badge === "detri") return "badge-detri";
-  return "badge-am";
+function badgeClass(tournamentType: string) {
+  if (tournamentType === "pro") return "badge-pro";
+  if (tournamentType === "amateur" || tournamentType === "mixto") return "badge-am";
+  return "badge-detri";
 }
 
-function statusBadge(status: "en_curso" | "registro") {
-  if (status === "en_curso")
+function statusBadge(status: string) {
+  if (status === "in_progress")
     return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-success/15 text-success"><span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> En Curso</span>;
-  return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-400"><span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Registro Abierto</span>;
+  if (status === "registration")
+    return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-400"><span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Registro Abierto</span>;
+  if (status === "check_in")
+    return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-400"><span className="h-1.5 w-1.5 rounded-full bg-purple-400" /> Check-In</span>;
+  if (status === "cancelled")
+    return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-500/15 text-red-400">Cancelado</span>;
+  if (status === "finished")
+    return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-500/15 text-green-400">Finalizado</span>;
+  return <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-3 text-muted">{status}</span>;
+}
+
+function formatStartDate(iso: string | null): string {
+  if (!iso) return "Por definir";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Por definir";
+  return d.toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" });
+}
+
+function tournamentTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    detri: "Detri", amateur: "Amateur", pro: "Pro", skills: "Skills",
+    evento: "Evento", mixto: "Mixto", novice: "Novice", invitacional: "Invitacional",
+    clasificatorio: "Clasificatorio", weekly: "Semanal", monthly: "Mensual", showmatch: "Showmatch",
+  };
+  return labels[type] || type;
 }
 
 /* ───── Components ───── */
@@ -136,16 +169,142 @@ function BracketMatch({ a, b, winner, round }: { a: string; b: string; winner: s
   );
 }
 
-function TournamentCard({ t }: { t: typeof activeTournaments[0] }) {
-  const pct = Math.round((t.filledSlots / t.totalSlots) * 100);
+/**
+ * Open the PayPal approval URL in a popup and resolve once the popup closes.
+ * Caller is then expected to confirm the order server-side.
+ */
+function openPayPalPopup(approvalUrl: string): Promise<void> {
+  return new Promise((resolve) => {
+    const w = 480;
+    const h = 720;
+    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
+    const popup = window.open(
+      approvalUrl,
+      "paypal-checkout",
+      `width=${w},height=${h},left=${left},top=${top}`,
+    );
+    if (!popup) {
+      // Popup blocked — fall back to redirect.
+      window.location.href = approvalUrl;
+      return;
+    }
+    const interval = window.setInterval(() => {
+      if (popup.closed) {
+        window.clearInterval(interval);
+        resolve();
+      }
+    }, 600);
+  });
+}
+
+function TournamentCard({
+  t,
+  currentUserId,
+  walletBalance,
+  onChange,
+}: {
+  t: TournamentDTO;
+  currentUserId: string | null;
+  walletBalance: number | null;
+  onChange: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal">(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const pct = t.maxSlots > 0 ? Math.round((t.filledSlots / t.maxSlots) * 100) : 0;
+  const distribution = useMemo(
+    () => resolvePrizeSplits(t.prizeDistribution, t.customPrizeSplits),
+    [t.prizeDistribution, t.customPrizeSplits],
+  );
+  const isJoined = !!currentUserId && t.entries.some((e) => e.userId === currentUserId);
+  const isFull = t.filledSlots >= t.maxSlots;
+  const canJoin = t.status === "registration" && !isFull && !isJoined && !!currentUserId;
+  const canLeave = t.status === "registration" && isJoined;
+  const balance = walletBalance ?? 0;
+  const needsTopUp = canJoin && balance < t.entryFee;
+
+  const handleJoinWithWallet = useCallback(async () => {
+    setBusy("join");
+    setError(null);
+    try {
+      const res = await fetch(`/api/tournaments/${t.id}/join`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Error al inscribirse");
+      await onChange();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, [t.id, onChange]);
+
+  const handleLeave = useCallback(async () => {
+    if (!window.confirm(`Salir de "${t.name}"? Se reembolsara la entrada.`)) return;
+    setBusy("leave");
+    setError(null);
+    try {
+      const res = await fetch(`/api/tournaments/${t.id}/leave`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Error al salir");
+      await onChange();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, [t.id, t.name, onChange]);
+
+  const handlePayPalJoin = useCallback(async () => {
+    setBusy("paypal");
+    setError(null);
+    try {
+      // Top up the missing portion of the entry fee. PayPal create-order
+      // requires a minimum of $1, so round up if the gap is smaller — the
+      // remainder stays in the wallet as credit.
+      const topUp = Math.max(t.entryFee - balance, 1);
+      const orderRes = await fetch("/api/paypal/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: Number(topUp.toFixed(2)) }),
+      });
+      const orderData = await orderRes.json().catch(() => ({}));
+      if (!orderRes.ok) throw new Error(orderData.error || "Error al crear orden de PayPal");
+      const { orderId, approvalUrl } = orderData as { orderId: string; approvalUrl: string };
+      if (!approvalUrl) throw new Error("PayPal no devolvio URL de aprobacion");
+
+      await openPayPalPopup(approvalUrl);
+
+      // Capture + join in one shot. If the user closed the popup without paying,
+      // PayPal will return an error here — surface it to the user.
+      const joinRes = await fetch(`/api/tournaments/${t.id}/paypal-join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const joinData = await joinRes.json().catch(() => ({}));
+      if (!joinRes.ok) throw new Error(joinData.error || "El pago no se completo");
+      await onChange();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, [t.id, t.entryFee, balance, onChange]);
+
   return (
     <div className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col gap-4">
       {/* Top row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`${badgeClass(t.badge)} text-[10px] font-bold uppercase px-2 py-0.5 rounded-full tracking-wide`}>{t.badgeLabel}</span>
+            <span className={`${badgeClass(t.tournamentType)} text-[10px] font-bold uppercase px-2 py-0.5 rounded-full tracking-wide`}>
+              {tournamentTypeLabel(t.tournamentType)}
+            </span>
             {statusBadge(t.status)}
+            {isJoined && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400">Inscrito</span>
+            )}
           </div>
           <h3 className="text-lg font-bold text-foreground mt-1">{t.name}</h3>
         </div>
@@ -156,22 +315,27 @@ function TournamentCard({ t }: { t: typeof activeTournaments[0] }) {
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="flex items-center gap-1.5 text-muted"><GamepadIcon /> {t.game}</div>
         <div className="flex items-center gap-1.5 text-muted"><UsersIcon /> {t.format}</div>
-        <div className="flex items-center gap-1.5 text-muted"><DollarIcon /> Entrada: ${t.entryFee}</div>
-        <div className="flex items-center gap-1.5 text-muted"><ClockIcon /> {t.startDate}</div>
+        <div className="flex items-center gap-1.5 text-muted"><DollarIcon /> Entrada: ${t.entryFee.toFixed(2)}</div>
+        <div className="flex items-center gap-1.5 text-muted"><ClockIcon /> {formatStartDate(t.startDate)}</div>
       </div>
 
       {/* Prize pool */}
-      <div className="bg-surface-2 rounded-lg p-3 flex items-center justify-between">
+      <div className="bg-surface-2 rounded-lg p-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted uppercase tracking-wide">Pozo de premios</p>
-          <p className="text-xl font-bold text-blue-400">${t.prizePool}</p>
+          <p className="text-xl font-bold text-blue-400">${t.prizePool.toFixed(2)}</p>
         </div>
-        <div className="flex gap-1.5">
-          {t.distribution.map((d, i) => (
+        <div className="flex gap-1.5 flex-wrap justify-end">
+          {distribution.slice(0, 4).map((d, i) => (
             <span key={i} className="text-[10px] bg-surface-3 border border-border-light text-muted px-1.5 py-0.5 rounded">
               {i === 0 ? "1ro" : i === 1 ? "2do" : i === 2 ? "3ro" : "4to"} {d}%
             </span>
           ))}
+          {distribution.length > 4 && (
+            <span className="text-[10px] bg-surface-3 border border-border-light text-muted px-1.5 py-0.5 rounded">
+              +{distribution.length - 4}
+            </span>
+          )}
         </div>
       </div>
 
@@ -179,21 +343,65 @@ function TournamentCard({ t }: { t: typeof activeTournaments[0] }) {
       <div>
         <div className="flex justify-between text-xs text-muted mb-1.5">
           <span>Cupos</span>
-          <span>{t.filledSlots}/{t.totalSlots}</span>
+          <span>{t.filledSlots}/{t.maxSlots}</span>
         </div>
         <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-main rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{error}</div>
+      )}
+
       {/* CTA */}
-      <button className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${
-        t.status === "en_curso"
-          ? "bg-surface-3 border border-border text-muted cursor-default"
-          : "bg-gradient-main text-white hover:opacity-90"
-      }`}>
-        {t.status === "en_curso" ? "Ver Bracket" : "Inscribirme"}
-      </button>
+      {!currentUserId ? (
+        <a href="/login" className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted hover:text-foreground text-center transition-colors">
+          Inicia sesion para inscribirte
+        </a>
+      ) : t.status === "in_progress" || t.status === "check_in" ? (
+        <button className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted cursor-default">
+          Ver Bracket
+        </button>
+      ) : t.status === "finished" || t.status === "cancelled" ? (
+        <button className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted cursor-default">
+          {t.status === "finished" ? "Torneo finalizado" : "Torneo cancelado"}
+        </button>
+      ) : canLeave ? (
+        <button
+          onClick={handleLeave}
+          disabled={busy !== null}
+          className="w-full py-2.5 rounded-lg text-sm font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+        >
+          {busy === "leave" ? "Saliendo..." : "Salir (reembolso)"}
+        </button>
+      ) : isFull ? (
+        <button className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted cursor-default">
+          Torneo lleno
+        </button>
+      ) : needsTopUp ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted">
+            Saldo actual: <span className="text-foreground font-medium">${balance.toFixed(2)}</span>. Faltan ${(t.entryFee - balance).toFixed(2)}.
+          </p>
+          <button
+            onClick={handlePayPalJoin}
+            disabled={busy !== null}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-main text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {busy === "paypal" ? "Procesando..." : `Pagar $${t.entryFee.toFixed(2)} con PayPal`}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleJoinWithWallet}
+          disabled={busy !== null}
+          className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-main text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {busy === "join" ? "Inscribiendo..." : `Inscribirme ($${t.entryFee.toFixed(2)})`}
+        </button>
+      )}
     </div>
   );
 }
@@ -201,6 +409,73 @@ function TournamentCard({ t }: { t: typeof activeTournaments[0] }) {
 /* ───── Page ───── */
 export default function TorneosPage() {
   const [tab, setTab] = useState<Tab>("rapida");
+
+  // Tournament data
+  const [tournaments, setTournaments] = useState<TournamentDTO[]>([]);
+  const [tournamentsLoading, setTournamentsLoading] = useState(true);
+  const [tournamentsError, setTournamentsError] = useState<string | null>(null);
+
+  // Authenticated user (for join eligibility) + wallet balance (for PayPal fallback)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
+  const fetchTournaments = useCallback(async () => {
+    try {
+      setTournamentsError(null);
+      const res = await fetch("/api/tournaments");
+      if (!res.ok) throw new Error("Error al cargar torneos");
+      const data = await res.json();
+      setTournaments(data.tournaments || []);
+    } catch (err) {
+      setTournamentsError((err as Error).message);
+    } finally {
+      setTournamentsLoading(false);
+    }
+  }, []);
+
+  const fetchMe = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users/me");
+      if (!res.ok) {
+        setCurrentUserId(null);
+        setWalletBalance(null);
+        return;
+      }
+      const data = await res.json();
+      setCurrentUserId(data.user?.id ?? null);
+      setWalletBalance(typeof data.user?.balance === "number" ? data.user.balance : null);
+    } catch {
+      setCurrentUserId(null);
+      setWalletBalance(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTournaments();
+    fetchMe();
+  }, [fetchTournaments, fetchMe]);
+
+  const refreshAfterJoin = useCallback(async () => {
+    await Promise.all([fetchTournaments(), fetchMe()]);
+  }, [fetchTournaments, fetchMe]);
+
+  const activeTournaments = useMemo(
+    () => tournaments.filter((t) => t.status === "registration" || t.status === "in_progress" || t.status === "check_in"),
+    [tournaments],
+  );
+  const upcomingTournaments = useMemo(
+    () =>
+      tournaments.filter((t) => {
+        if (t.status !== "registration") return false;
+        if (!t.startDate) return false;
+        return new Date(t.startDate).getTime() > Date.now();
+      }),
+    [tournaments],
+  );
+  const finishedTournaments = useMemo(
+    () => tournaments.filter((t) => t.status === "finished"),
+    [tournaments],
+  );
 
   const [qmAmount, setQmAmount] = useState(10);
   const [qmSearching, setQmSearching] = useState(false);
@@ -301,11 +576,34 @@ export default function TorneosPage() {
         {tab === "activos" && (
           <div className="space-y-12">
             {/* Cards grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {activeTournaments.map((t) => (
-                <TournamentCard key={t.id} t={t} />
-              ))}
-            </div>
+            {tournamentsLoading ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-72" />
+                ))}
+              </div>
+            ) : tournamentsError ? (
+              <div className="bg-surface border border-red-500/30 rounded-xl p-6 text-center">
+                <p className="text-red-400 text-sm mb-3">{tournamentsError}</p>
+                <button onClick={fetchTournaments} className="px-4 py-2 bg-surface-2 border border-border text-muted rounded-lg text-sm hover:text-foreground transition-colors">Reintentar</button>
+              </div>
+            ) : activeTournaments.length === 0 ? (
+              <div className="bg-surface border border-border rounded-xl p-10 text-center text-muted text-sm">
+                No hay torneos activos por ahora. Vuelve pronto.
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {activeTournaments.map((t) => (
+                  <TournamentCard
+                    key={t.id}
+                    t={t}
+                    currentUserId={currentUserId}
+                    walletBalance={walletBalance}
+                    onChange={refreshAfterJoin}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Bracket - Copa Phoenix Semanal #12 */}
             <div>
@@ -363,58 +661,73 @@ export default function TorneosPage() {
 
         {/* Upcoming tab */}
         {tab === "proximos" && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {upcomingTournaments.map((t) => (
-              <div key={t.id} className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col gap-3 opacity-90">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-foreground">{t.name}</h3>
-                  <CalendarIcon className="h-5 w-5 text-muted" />
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm text-muted">
-                  <div className="flex items-center gap-1.5"><GamepadIcon /> {t.game}</div>
-                  <div className="flex items-center gap-1.5"><UsersIcon /> {t.format}</div>
-                  <div className="flex items-center gap-1.5"><DollarIcon /> ${t.entryFee}</div>
-                  <div className="flex items-center gap-1.5"><ClockIcon /> {t.startDate}</div>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <span className="text-blue-400 font-bold">${t.prizePool}</span>
-                  <span className="text-xs text-muted">Cupos: {t.slots}</span>
-                </div>
-                <button className="w-full py-2 rounded-lg text-sm font-semibold border border-border-light text-foreground hover:bg-surface-2 transition-colors">
-                  Pre-inscribirme
-                </button>
-              </div>
-            ))}
-          </div>
+          tournamentsLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-48" />
+              ))}
+            </div>
+          ) : upcomingTournaments.length === 0 ? (
+            <div className="bg-surface border border-border rounded-xl p-10 text-center text-muted text-sm">
+              No hay torneos proximos programados.
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {upcomingTournaments.map((t) => (
+                <TournamentCard
+                  key={t.id}
+                  t={t}
+                  currentUserId={currentUserId}
+                  walletBalance={walletBalance}
+                  onChange={refreshAfterJoin}
+                />
+              ))}
+            </div>
+          )
         )}
 
         {/* Finished tab */}
         {tab === "finalizados" && (
-          <div className="grid gap-4 md:grid-cols-2">
-            {finishedTournaments.map((t) => (
-              <div key={t.id} className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-foreground">{t.name}</h3>
-                  <span className="text-xs bg-surface-3 text-muted px-2 py-0.5 rounded-full">{t.date}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted">
-                  <GamepadIcon /> {t.game}
-                  <span className="text-border-light">|</span>
-                  <UsersIcon /> {t.participants} participantes
-                </div>
-                <div className="bg-surface-2 rounded-lg p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrophyIcon className="h-5 w-5 text-warning" />
-                    <div>
-                      <p className="text-xs text-muted">Campeon</p>
-                      <p className="font-bold text-foreground">{t.winner}</p>
+          tournamentsLoading ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-32" />
+              ))}
+            </div>
+          ) : finishedTournaments.length === 0 ? (
+            <div className="bg-surface border border-border rounded-xl p-10 text-center text-muted text-sm">
+              No hay torneos finalizados todavia.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {finishedTournaments.map((t) => {
+                const winnerEntry = t.entries.find((e) => e.user); // entries don't include placement here
+                return (
+                  <div key={t.id} className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-foreground">{t.name}</h3>
+                      <span className="text-xs bg-surface-3 text-muted px-2 py-0.5 rounded-full">{formatStartDate(t.startDate)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted">
+                      <GamepadIcon /> {t.game}
+                      <span className="text-border-light">|</span>
+                      <UsersIcon /> {t.entries.length} participantes
+                    </div>
+                    <div className="bg-surface-2 rounded-lg p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <TrophyIcon className="h-5 w-5 text-warning" />
+                        <div>
+                          <p className="text-xs text-muted">{t.format}</p>
+                          <p className="font-bold text-foreground">{winnerEntry?.user?.username || "Resultados pendientes"}</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-blue-400">${t.prizePool.toFixed(2)}</span>
                     </div>
                   </div>
-                  <span className="text-lg font-bold text-blue-400">{t.prize}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )
         )}
 
         {/* How tournaments work */}

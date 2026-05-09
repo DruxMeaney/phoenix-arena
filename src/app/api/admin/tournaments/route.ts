@@ -1,6 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import {
+  PRIZE_DISTRIBUTION_VALUES,
+  validateCustomSplits,
+} from "@/lib/prize-splits";
+
+const PRIZE_DISTRIBUTION_SET = new Set<string>(PRIZE_DISTRIBUTION_VALUES);
+
+/**
+ * Normalise the prize-distribution inputs from the admin form. Returns the
+ * fields to persist or an error message if invalid.
+ */
+function parsePrizeDistribution(updates: Record<string, unknown>):
+  | { error: string }
+  | { prizeDistribution?: string; customPrizeSplits?: string | null } {
+  const result: { prizeDistribution?: string; customPrizeSplits?: string | null } = {};
+
+  if (updates.prizeDistribution !== undefined) {
+    const dist = String(updates.prizeDistribution);
+    if (!PRIZE_DISTRIBUTION_SET.has(dist)) {
+      return { error: `prizeDistribution invalido: ${dist}` };
+    }
+    result.prizeDistribution = dist;
+  }
+
+  if (updates.customPrizeSplits !== undefined) {
+    const raw = updates.customPrizeSplits;
+    if (raw === null || raw === "") {
+      result.customPrizeSplits = null;
+    } else {
+      let parsed: unknown = raw;
+      if (typeof raw === "string") {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          return { error: "customPrizeSplits debe ser JSON valido" };
+        }
+      }
+      const err = validateCustomSplits(parsed);
+      if (err) return { error: err };
+      result.customPrizeSplits = JSON.stringify(parsed);
+    }
+  }
+
+  return result;
+}
 
 /** GET /api/admin/tournaments — List all tournaments with full details */
 export async function GET() {
@@ -35,6 +80,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Campos requeridos: name, format, entryFee, maxSlots" }, { status: 400 });
   }
 
+  const prize = parsePrizeDistribution(body);
+  if ("error" in prize) return NextResponse.json({ error: prize.error }, { status: 400 });
+
   const tournament = await prisma.tournament.create({
     data: {
       name,
@@ -47,6 +95,8 @@ export async function POST(request: NextRequest) {
       description: description || null,
       rules: rules || null,
       createdById: user.id,
+      ...(prize.prizeDistribution !== undefined && { prizeDistribution: prize.prizeDistribution }),
+      ...(prize.customPrizeSplits !== undefined && { customPrizeSplits: prize.customPrizeSplits }),
     },
   });
 
@@ -74,6 +124,11 @@ export async function PUT(request: NextRequest) {
       else data[key] = updates[key];
     }
   }
+
+  const prize = parsePrizeDistribution(updates);
+  if ("error" in prize) return NextResponse.json({ error: prize.error }, { status: 400 });
+  if (prize.prizeDistribution !== undefined) data.prizeDistribution = prize.prizeDistribution;
+  if (prize.customPrizeSplits !== undefined) data.customPrizeSplits = prize.customPrizeSplits;
 
   const tournament = await prisma.tournament.update({
     where: { id },

@@ -178,6 +178,9 @@ model Tournament {
   createdById    String?
   startDate      DateTime?
   completedAt    DateTime?
+  cancelledAt    DateTime?
+  prizeDistribution  String   @default("winner_takes_all")  // winner_takes_all | top_3 | top_5 | top_8 | custom
+  customPrizeSplits  String?  // JSON array of percentages, used when prizeDistribution = "custom"
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

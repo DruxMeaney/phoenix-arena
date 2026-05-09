@@ -42,11 +42,16 @@ export async function POST(
       amount: -tournament.entryFee,
       description: `Inscripcion a ${tournament.name}`,
       status: "completed",
+      reference: tournament.id,
     },
   });
 
   await prisma.tournamentEntry.create({
-    data: { tournamentId: tournament.id, userId: user.id },
+    data: {
+      tournamentId: tournament.id,
+      userId: user.id,
+      paidAmount: tournament.entryFee,
+    },
   });
 
   await prisma.tournament.update({

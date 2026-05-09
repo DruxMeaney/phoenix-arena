@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { recalculateAllRankings } from "@/lib/scoring/recalculate";
+import { PLATFORM_COMMISSION, resolvePrizeSplits } from "@/lib/prize-splits";
 
 const PLACEMENT_POINTS: Record<number, number> = {
   1: 100, 2: 80, 3: 70, 4: 60, 5: 50,
@@ -172,27 +173,40 @@ export async function POST(
     },
   });
 
-  // Prize distribution for winner (1st place gets 90% of prize pool)
+  // Prize distribution: pay each placement per the configured splits.
+  // Platform retains PLATFORM_COMMISSION of the pool; the rest is split.
   if (tournament.prizePool > 0) {
-    const winner = results.find((r) => r.placement === 1);
-    if (winner) {
-      const prize = tournament.prizePool * 0.9; // 10% commission
+    const splits = resolvePrizeSplits(
+      tournament.prizeDistribution,
+      tournament.customPrizeSplits,
+    );
+    const distributablePool = tournament.prizePool * (1 - PLATFORM_COMMISSION);
+
+    for (let i = 0; i < splits.length; i++) {
+      const place = i + 1;
+      const placePct = splits[i];
+      if (placePct <= 0) continue;
+      const winner = results.find((r) => r.placement === place);
+      if (!winner) continue;
+
+      const prize = distributablePool * (placePct / 100);
       const wallet = await prisma.wallet.findUnique({ where: { userId: winner.userId } });
-      if (wallet) {
-        await prisma.wallet.update({
-          where: { id: wallet.id },
-          data: { balance: { increment: prize } },
-        });
-        await prisma.transaction.create({
-          data: {
-            walletId: wallet.id,
-            type: "tournament_win",
-            amount: prize,
-            description: `Premio: 1er lugar en ${tournament.name}`,
-            status: "completed",
-          },
-        });
-      }
+      if (!wallet) continue;
+
+      await prisma.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: prize } },
+      });
+      await prisma.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "tournament_win",
+          amount: prize,
+          description: `Premio: ${place}° lugar en ${tournament.name}`,
+          status: "completed",
+          reference: tournament.id,
+        },
+      });
     }
   }
 
