@@ -169,32 +169,50 @@ function BracketMatch({ a, b, winner, round }: { a: string; b: string; winner: s
   );
 }
 
+type PaymentPopupResult = { paymentId: string | null; status: string | null };
+
 /**
- * Open the PayPal approval URL in a popup and resolve once the popup closes.
- * Caller is then expected to confirm the order server-side.
+ * Open a checkout URL in a popup. For PayPal we just wait for the popup to
+ * close (the order id is known beforehand). For MercadoPago we additionally
+ * listen for a postMessage from /payment-return carrying `paymentId`.
  */
-function openPayPalPopup(approvalUrl: string): Promise<void> {
+function openPaymentPopup(url: string, expectedProvider: "paypal" | "mp"): Promise<PaymentPopupResult> {
   return new Promise((resolve) => {
     const w = 480;
     const h = 720;
     const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
     const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
-    const popup = window.open(
-      approvalUrl,
-      "paypal-checkout",
-      `width=${w},height=${h},left=${left},top=${top}`,
-    );
+    const popup = window.open(url, "phoenix-checkout", `width=${w},height=${h},left=${left},top=${top}`);
     if (!popup) {
-      // Popup blocked — fall back to redirect.
-      window.location.href = approvalUrl;
+      window.location.href = url;
       return;
     }
+
+    let settled = false;
+    const settle = (val: PaymentPopupResult) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("message", listener);
+      window.clearInterval(interval);
+      resolve(val);
+    };
+
+    const listener = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.source !== "phoenix-payment-return") return;
+      if (data.provider !== expectedProvider) return;
+      settle({
+        paymentId: typeof data.paymentId === "string" ? data.paymentId : null,
+        status: typeof data.status === "string" ? data.status : null,
+      });
+    };
+
     const interval = window.setInterval(() => {
-      if (popup.closed) {
-        window.clearInterval(interval);
-        resolve();
-      }
+      if (popup.closed) settle({ paymentId: null, status: null });
     }, 600);
+
+    window.addEventListener("message", listener);
   });
 }
 
@@ -209,7 +227,7 @@ function TournamentCard({
   walletBalance: number | null;
   onChange: () => Promise<void>;
 }) {
-  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal">(null);
+  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal" | "mercadopago">(null);
   const [error, setError] = useState<string | null>(null);
 
   const pct = t.maxSlots > 0 ? Math.round((t.filledSlots / t.maxSlots) * 100) : 0;
@@ -273,7 +291,7 @@ function TournamentCard({
       const { orderId, approvalUrl } = orderData as { orderId: string; approvalUrl: string };
       if (!approvalUrl) throw new Error("PayPal no devolvio URL de aprobacion");
 
-      await openPayPalPopup(approvalUrl);
+      await openPaymentPopup(approvalUrl, "paypal");
 
       // Capture + join in one shot. If the user closed the popup without paying,
       // PayPal will return an error here — surface it to the user.
@@ -281,6 +299,43 @@ function TournamentCard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId }),
+      });
+      const joinData = await joinRes.json().catch(() => ({}));
+      if (!joinRes.ok) throw new Error(joinData.error || "El pago no se completo");
+      await onChange();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, [t.id, t.entryFee, balance, onChange]);
+
+  const handleMercadoPagoJoin = useCallback(async () => {
+    setBusy("mercadopago");
+    setError(null);
+    try {
+      const topUp = Math.max(t.entryFee - balance, 1);
+      const prefRes = await fetch("/api/mercadopago/create-preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(topUp.toFixed(2)),
+          purpose: "tournament_join",
+          tournamentId: t.id,
+        }),
+      });
+      const prefData = await prefRes.json().catch(() => ({}));
+      if (!prefRes.ok) throw new Error(prefData.error || "Error al crear orden de MercadoPago");
+      const { initPoint } = prefData as { initPoint: string };
+      if (!initPoint) throw new Error("MercadoPago no devolvio URL de pago");
+
+      const result = await openPaymentPopup(initPoint, "mp");
+      if (!result.paymentId) throw new Error("Pago cancelado o no completado");
+
+      const joinRes = await fetch(`/api/tournaments/${t.id}/mercadopago-join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: result.paymentId }),
       });
       const joinData = await joinRes.json().catch(() => ({}));
       if (!joinRes.ok) throw new Error(joinData.error || "El pago no se completo");
@@ -390,7 +445,14 @@ function TournamentCard({
             disabled={busy !== null}
             className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-main text-white hover:opacity-90 disabled:opacity-50"
           >
-            {busy === "paypal" ? "Procesando..." : `Pagar $${t.entryFee.toFixed(2)} con PayPal`}
+            {busy === "paypal" ? "Procesando..." : `Pagar con PayPal ($${t.entryFee.toFixed(2)})`}
+          </button>
+          <button
+            onClick={handleMercadoPagoJoin}
+            disabled={busy !== null}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 transition-colors"
+          >
+            {busy === "mercadopago" ? "Procesando..." : `Pagar con MercadoPago ($${t.entryFee.toFixed(2)})`}
           </button>
         </div>
       ) : (
