@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import PlayerPsrHistoryView from "@/components/player-psr-history";
+import type { PlayerPsrHistory } from "@/lib/ranking/player-history";
 
 interface PublicProfile {
   id: string;
@@ -25,6 +27,7 @@ interface PublicProfile {
   isOnline: boolean;
   level: number;
   createdAt: string;
+  psrHistory: PlayerPsrHistory | null;
   profilePosts: { id: string; content: string; postType: string; createdAt: string }[];
 }
 
@@ -140,7 +143,7 @@ export default function JugadorPage() {
           {[
             { label: "XP Total", value: profile.xp.toLocaleString() },
             { label: "XP Semanal", value: profile.seasonXp.toLocaleString() },
-            { label: "Peak Score", value: profile.peakScore > 0 ? profile.peakScore.toFixed(1) : "--" },
+            { label: "PSR", value: profile.psrHistory ? profile.psrHistory.current.psr.toFixed(1) : "--" },
             { label: "Nivel", value: String(profile.level) },
           ].map((s) => (
             <div key={s.label} className="bg-surface/40 backdrop-blur-sm rounded-xl p-4 text-center" style={{ border: `1px solid ${theme.accent}20`, boxShadow: `0 0 15px ${theme.accent}08` }}>
@@ -148,6 +151,10 @@ export default function JugadorPage() {
               <p className="text-[10px] text-muted uppercase tracking-wider mt-1">{s.label}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mb-8">
+          <PlayerPsrHistoryView history={profile.psrHistory} />
         </div>
 
         {/* Social + Game info */}

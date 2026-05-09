@@ -2,6 +2,8 @@
 
 Version implementada: `psr-0.1-draft`
 
+Esquema de captura de torneos: `psr-legacy-v1`
+
 ## Objetivo
 
 Phoenix Skill Rating es la propuesta de ranking competitivo para Phoenix Arena. Su objetivo es clasificar jugadores de forma robusta, auditable y explicable cuando la plataforma tenga torneos, retos y premios con dinero.
@@ -48,6 +50,61 @@ La version `psr-0.1-draft` ya esta aplicada en el proyecto:
 - Migracion de auditoria: `prisma/migrations/20260506052048_add_psr_audit`
 
 El modelo corre en estado `shadow`: calcula PSR real, persiste deltas cuando se confirma un resultado o cuando un admin ejecuta rebuild, pero todavia debe validarse con historico antes de usarse como criterio final de premios.
+
+## Integracion de parametros historicos `00_old`
+
+El analisis de los archivos historicos encontro que esos torneos no usaban PSR; usaban una captura operacional con registros de equipo, jugadores, rondas, placement, kills, subtotal, verificaciones y casos de Matchpoint.
+
+La integracion aplicada conserva esa informacion como evidencia de torneo, pero no reemplaza el modelo PSR. La regla es:
+
+```text
+captura historica enriquecida -> RankingMatchRecord -> reconstruccion PSR -> RankingDelta/Snapshot
+```
+
+Los parametros recuperados que ahora se pueden guardar por torneo son:
+
+- equipo: `teamName`, `teamNumber`, `teamGroup`, `rosterSlot`, `captainHandle`
+- identidad operativa: `rawHandle`, `normalizedHandle`
+- resultado final: `placement`, `kills`, `deaths`
+- rondas/mapas: `roundsPlayed`, `averagePlacement`, `averageKills`, `roundResults`
+- desempeno de equipo: `teamKills`, `skillPoints`, `rawPoints`
+- Matchpoint: `matchpointWin`, `matchpointBonus`
+- verificacion: `paymentVerified`, `discordVerified`, `photoVerified`, `flyerVerified`, `rulesAccepted`, `adminVerified`
+- auditoria: `sourceType`, `sourceId`, `sourceHash`, `captureSchemaVersion`, `evidenceUrl`
+
+La formula legacy observada queda documentada y reproducible:
+
+```text
+skillPoints_round = teamKills_round * placementMultiplier(placement_round)
+
+placementMultiplier(0)     = 0
+placementMultiplier(1)     = 1.6
+placementMultiplier(2..5)  = 1.4
+placementMultiplier(6..10) = 1.2
+placementMultiplier(11+)   = 1.0
+```
+
+En eventos con Matchpoint, el bono historico hacia que el total bruto llegara a `999`. PSR no usa ese `999` como performance porque distorsionaria el rating. En su lugar:
+
+- `skillPoints` guarda el desempeno competitivo sin el bono.
+- `rawPoints` puede guardar el total historico bruto.
+- `matchpointBonus` guarda la diferencia.
+- `matchpointWin` deja el marcador auditado.
+- El resultado competitivo principal sigue siendo el placement y el update bayesiano PSR.
+
+## Captura admin aplicada
+
+La pantalla de captura de resultados de torneo ahora permite registrar datos compatibles con `00_old`: equipo, grupo, kills, deaths, placement, rondas, promedio de placement, kills de equipo, puntos skill, Matchpoint y checks de verificacion.
+
+Al guardar un torneo, el API:
+
+1. Normaliza los campos capturados.
+2. Calcula `skillPoints` con la formula legacy si el admin no los escribe manualmente.
+3. Separa `rawPoints` y `matchpointBonus` para que el `999` no entre al PSR.
+4. Guarda `TournamentResult` como registro operativo auditable.
+5. Recrea `RankingMatchRecord` para el evento completo.
+6. Ejecuta `rebuildAndPersistPsrRankings()`.
+7. Persiste `RankingEventLog`, `RankingDelta` y `RankingSnapshot`.
 
 ## Parametros activos
 
@@ -121,6 +178,14 @@ w = v * (v + t)
 
 El ganador recibe ajuste positivo y el perdedor ajuste negativo; ambos reducen incertidumbre segun la informacion aportada por el resultado. En eventos individuales o historicos sin lobby completo, el sistema aplica evidencia provisional acotada y conserva mas incertidumbre.
 
+La senal de performance individual queda acotada y ahora usa los parametros historicos asi:
+
+- `placement` sigue siendo la senal dominante.
+- `averagePlacement` ayuda a distinguir consistencia por mapa sin reemplazar el resultado final.
+- `averageKills` normaliza kills por rondas para no premiar simplemente torneos mas largos.
+- `skillPoints` usa kills de equipo por placement multiplier, sin incluir Matchpoint `999`.
+- `rawPoints`, `matchpointWin` y `matchpointBonus` se guardan para auditoria, no como multiplicador directo de habilidad.
+
 ## Separacion entre habilidad y confianza
 
 PSR no debe mezclar habilidad con confianza operativa.
@@ -191,6 +256,28 @@ Campos agregados a `RankingMatchRecord`:
 - `verified`
 - `modelVersion`
 - `psrProcessedAt`
+- `teamName`, `teamNumber`, `teamGroup`
+- `roundsPlayed`, `averagePlacement`, `averageKills`
+- `skillPoints`, `rawPoints`, `matchpointWin`, `matchpointBonus`
+- `roundResults`, `complianceFlags`, `captureSchemaVersion`
+
+Campos agregados a `Tournament`:
+
+- `scoringModel`
+- `captureSchemaVersion`
+- `mapCount`
+- `ranked`
+- `psrWeight`
+- `captureMeta`
+
+Campos agregados a `TournamentResult`:
+
+- `teamName`, `teamNumber`, `teamGroup`, `rosterSlot`, `captainHandle`
+- `rawHandle`, `normalizedHandle`
+- `roundsPlayed`, `averagePlacement`, `averageKills`
+- `skillPoints`, `rawPoints`, `matchpointWin`, `matchpointBonus`
+- `paymentVerified`, `discordVerified`, `photoVerified`, `flyerVerified`, `rulesAccepted`, `adminVerified`
+- `sourceType`, `sourceHash`, `captureSchemaVersion`, `roundResults`, `complianceFlags`
 
 Tablas agregadas:
 

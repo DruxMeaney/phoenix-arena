@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getPlayerPsrHistory } from "@/lib/ranking/player-history";
 
 /** GET /api/profile — Get full profile data */
 export async function GET() {
@@ -16,6 +17,8 @@ export async function GET() {
   });
 
   if (!full) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+
+  const psrHistory = await getPlayerPsrHistory(full.id, { days: 30, limit: 100 });
 
   return NextResponse.json({
     id: full.id,
@@ -38,9 +41,16 @@ export async function GET() {
     xp: full.xp,
     seasonXp: full.seasonXp,
     peakScore: full.peakScore,
+    psrMu: full.psrMu,
+    psrSigma: full.psrSigma,
+    psrScore: full.psrScore,
+    psrMatches: full.psrMatches,
+    peakPsr: full.peakPsr,
+    psrModelVersion: full.psrModelVersion,
     createdAt: full.createdAt,
     balance: full.wallet?.balance ?? 0,
     posts: full.profilePosts,
+    psrHistory,
   });
 }
 

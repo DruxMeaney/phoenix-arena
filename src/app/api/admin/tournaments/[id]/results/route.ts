@@ -1,19 +1,332 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { recalculateAllRankings } from "@/lib/scoring/recalculate";
+import { rebuildAndPersistPsrRankings } from "@/lib/ranking/psr-service";
+import { PSR_MODEL_VERSION } from "@/lib/scoring";
 
-const PLACEMENT_POINTS: Record<number, number> = {
-  1: 100, 2: 80, 3: 70, 4: 60, 5: 50,
-  6: 40, 7: 30, 8: 20, 9: 10, 10: 10,
-  11: 10, 12: 10, 13: 10, 14: 10, 15: 10, 16: 10,
+const CAPTURE_SCHEMA_VERSION = "psr-legacy-v1";
+const MATCHPOINT_TARGET = 999;
+
+type RoundCaptureInput = {
+  map?: number | string;
+  placement?: number | string;
+  kills?: number | string;
+  teamKills?: number | string;
+  matchpointWin?: boolean;
+  evidenceUrl?: string;
+  notes?: string;
 };
 
-function getPlacementPoints(position: number): number {
-  return PLACEMENT_POINTS[position] ?? 10;
+type ResultCaptureInput = {
+  userId: string;
+  teamName?: string | null;
+  teamNumber?: number | string | null;
+  teamGroup?: string | null;
+  rosterSlot?: number | string | null;
+  captainHandle?: string | null;
+  rawHandle?: string | null;
+  normalizedHandle?: string | null;
+  kills?: number | string | null;
+  deaths?: number | string | null;
+  placement?: number | string | null;
+  roundsPlayed?: number | string | null;
+  averagePlacement?: number | string | null;
+  averageKills?: number | string | null;
+  teamKills?: number | string | null;
+  teamPoints?: number | string | null;
+  skillPoints?: number | string | null;
+  rawPoints?: number | string | null;
+  matchpointWin?: boolean | null;
+  matchpointBonus?: number | string | null;
+  paymentVerified?: boolean | null;
+  discordVerified?: boolean | null;
+  photoVerified?: boolean | null;
+  flyerVerified?: boolean | null;
+  rulesAccepted?: boolean | null;
+  adminVerified?: boolean | null;
+  roundResults?: RoundCaptureInput[] | string | null;
+  evidenceUrl?: string | null;
+  notes?: string | null;
+};
+
+type EventMetaInput = {
+  seasonId?: string;
+  sourceType?: string;
+  verified?: boolean;
+  mapCount?: number | string;
+};
+
+type DerivedCapture = {
+  kills: number;
+  deaths: number;
+  storedPlacement: number;
+  rankingPlacement: number;
+  roundsPlayed: number;
+  averagePlacement: number;
+  averageKills: number;
+  teamKills: number;
+  teamPoints: number;
+  skillPoints: number;
+  rawPoints: number;
+  matchpointWin: boolean;
+  matchpointBonus: number;
+  roundResultsJson: string | null;
+  complianceFlagsJson: string;
+  sourceHash: string;
+};
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (value === null || value === undefined || value === "") return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-/** GET /api/admin/tournaments/[id]/results — Get tournament results */
+function toInt(value: unknown, fallback = 0): number {
+  return Math.trunc(toNumber(value, fallback));
+}
+
+function legacyPlacementMultiplier(placement: number): number {
+  if (placement <= 0) return 0;
+  if (placement === 1) return 1.6;
+  if (placement <= 5) return 1.4;
+  if (placement <= 10) return 1.2;
+  return 1;
+}
+
+function parseRoundResults(value: ResultCaptureInput["roundResults"]): RoundCaptureInput[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function average(values: number[], fallback: number): number {
+  const clean = values.filter((value) => Number.isFinite(value) && value > 0);
+  if (clean.length === 0) return fallback;
+  return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+}
+
+function inferTotalTeams(
+  results: ResultCaptureInput[],
+  tournament: { filledSlots: number; maxSlots: number }
+): number {
+  const teamKeys = new Set(
+    results
+      .map((result) => result.teamNumber ?? result.teamName)
+      .filter((value) => value !== null && value !== undefined && String(value).trim() !== "")
+      .map((value) => String(value).trim().toLowerCase())
+  );
+
+  if (teamKeys.size > 0) return teamKeys.size;
+  return Math.max(1, tournament.filledSlots || tournament.maxSlots || results.length);
+}
+
+function complianceFlags(result: ResultCaptureInput) {
+  return {
+    paymentVerified: result.paymentVerified === true,
+    discordVerified: result.discordVerified === true,
+    photoVerified: result.photoVerified === true,
+    flyerVerified: result.flyerVerified === true,
+    rulesAccepted: result.rulesAccepted === true,
+    adminVerified: result.adminVerified !== false,
+  };
+}
+
+function stableHash(payload: unknown): string {
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+function deriveCapture(
+  tournamentId: string,
+  result: ResultCaptureInput,
+  effectiveTotalTeams: number,
+  fallbackMapCount: number
+): DerivedCapture {
+  const rawRounds = parseRoundResults(result.roundResults);
+  const roundResults = rawRounds.map((round, index) => {
+    const placement = Math.max(0, toInt(round.placement, 0));
+    const teamKills = Math.max(0, toInt(round.teamKills, 0));
+    const kills = Math.max(0, toInt(round.kills, 0));
+    const placementMultiplier = legacyPlacementMultiplier(placement);
+    const skillPoints = teamKills * placementMultiplier;
+
+    return {
+      map: round.map ?? index + 1,
+      placement,
+      kills,
+      teamKills,
+      placementMultiplier,
+      skillPoints,
+      matchpointWin: round.matchpointWin === true,
+      evidenceUrl: round.evidenceUrl ?? null,
+      notes: round.notes ?? null,
+    };
+  });
+
+  const mapCount = Math.max(fallbackMapCount, roundResults.length, 0);
+  const roundsPlayed = Math.max(
+    0,
+    toInt(result.roundsPlayed, 0) || roundResults.length || mapCount
+  );
+  const killsFromRounds = roundResults.reduce((sum, round) => sum + round.kills, 0);
+  const teamKillsFromRounds = roundResults.reduce((sum, round) => sum + round.teamKills, 0);
+  const kills = Math.max(0, toInt(result.kills, killsFromRounds));
+  const deaths = Math.max(0, toInt(result.deaths, 0));
+  const storedPlacement = Math.max(0, toInt(result.placement, 0));
+  const rankingPlacement = storedPlacement > 0 ? storedPlacement : effectiveTotalTeams;
+  const averagePlacement = Math.max(
+    0,
+    toNumber(
+      result.averagePlacement,
+      average(
+        roundResults.map((round) => round.placement),
+        rankingPlacement
+      )
+    )
+  );
+  const averageKills = Math.max(
+    0,
+    toNumber(
+      result.averageKills,
+      roundsPlayed > 0 ? kills / roundsPlayed : kills
+    )
+  );
+  const teamKills = Math.max(
+    0,
+    toInt(result.teamKills, teamKillsFromRounds || kills)
+  );
+  const roundSkillPoints = roundResults.reduce((sum, round) => sum + round.skillPoints, 0);
+  const fallbackSkillPoints =
+    roundSkillPoints > 0
+      ? roundSkillPoints
+      : teamKills * legacyPlacementMultiplier(Math.round(averagePlacement || rankingPlacement));
+  const submittedSkillPoints = toNumber(result.skillPoints, -1);
+  const submittedTeamPoints = toNumber(result.teamPoints, -1);
+  const skillPoints = Math.max(
+    0,
+    submittedSkillPoints > 0
+      ? submittedSkillPoints
+      : submittedTeamPoints > 0
+        ? submittedTeamPoints
+        : fallbackSkillPoints
+  );
+  const matchpointWin =
+    result.matchpointWin === true || roundResults.some((round) => round.matchpointWin);
+  const rawPoints = Math.max(
+    0,
+    toNumber(result.rawPoints, matchpointWin ? MATCHPOINT_TARGET : skillPoints)
+  );
+  const matchpointBonus = Math.max(
+    0,
+    toNumber(
+      result.matchpointBonus,
+      matchpointWin ? Math.max(0, rawPoints - skillPoints) : 0
+    )
+  );
+  const flags = complianceFlags(result);
+
+  return {
+    kills,
+    deaths,
+    storedPlacement,
+    rankingPlacement,
+    roundsPlayed,
+    averagePlacement,
+    averageKills,
+    teamKills,
+    teamPoints: skillPoints,
+    skillPoints,
+    rawPoints,
+    matchpointWin,
+    matchpointBonus,
+    roundResultsJson: roundResults.length > 0 ? JSON.stringify(roundResults) : null,
+    complianceFlagsJson: JSON.stringify(flags),
+    sourceHash: stableHash({
+      tournamentId,
+      userId: result.userId,
+      placement: rankingPlacement,
+      kills,
+      deaths,
+      teamKills,
+      skillPoints,
+      rawPoints,
+      matchpointWin,
+      roundResults,
+      flags,
+    }),
+  };
+}
+
+async function recreatePsrRecordsForTournament(options: {
+  tournamentId: string;
+  tournamentType: string;
+  totalTeams: number;
+  seasonId: string;
+  sourceType: string;
+  sourceId: string;
+  evidenceUrl?: string | null;
+  verified: boolean;
+}) {
+  const allResults = await prisma.tournamentResult.findMany({
+    where: { tournamentId: options.tournamentId },
+  });
+  const bestKills = Math.max(...allResults.map((result) => result.kills), 0);
+  const bestSkillPoints = Math.max(
+    ...allResults.map((result) => result.skillPoints || result.teamPoints),
+    0
+  );
+
+  await prisma.rankingMatchRecord.deleteMany({
+    where: { tournamentId: options.tournamentId },
+  });
+
+  if (allResults.length === 0) return;
+
+  await prisma.rankingMatchRecord.createMany({
+    data: allResults.map((result) => ({
+      playerId: result.userId,
+      tournamentId: options.tournamentId,
+      eventId: options.tournamentId,
+      seasonId: options.seasonId,
+      sourceType: options.sourceType,
+      sourceId: options.sourceId,
+      evidenceUrl: result.evidenceUrl || options.evidenceUrl || null,
+      verified: options.verified && result.adminVerified,
+      modelVersion: PSR_MODEL_VERSION,
+      tournamentType: options.tournamentType,
+      date: new Date(),
+      kills: result.kills,
+      deaths: result.deaths,
+      position: Math.max(1, result.placement || options.totalTeams),
+      totalTeams: Math.max(1, options.totalTeams),
+      teamName: result.teamName,
+      teamNumber: result.teamNumber,
+      teamGroup: result.teamGroup,
+      roundsPlayed: result.roundsPlayed,
+      averagePlacement: result.averagePlacement,
+      averageKills: result.averageKills,
+      teamKills: result.teamKills,
+      teamPoints: result.skillPoints || result.teamPoints,
+      skillPoints: result.skillPoints || result.teamPoints,
+      rawPoints: result.rawPoints,
+      matchpointWin: result.matchpointWin,
+      matchpointBonus: result.matchpointBonus,
+      captureSchemaVersion: result.captureSchemaVersion,
+      roundResults: result.roundResults,
+      complianceFlags: result.complianceFlags,
+      bestKillsInTournament: bestKills,
+      bestTeamPointsInTournament: bestSkillPoints,
+    })),
+  });
+}
+
+/** GET /api/admin/tournaments/[id]/results - Get tournament results */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,7 +353,7 @@ export async function GET(
   return NextResponse.json({ tournament });
 }
 
-/** POST /api/admin/tournaments/[id]/results — Capture tournament results and recalculate rankings */
+/** POST /api/admin/tournaments/[id]/results - Capture tournament results and rebuild PSR */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -50,17 +363,11 @@ export async function POST(
 
   const { id } = await params;
   const body = await request.json();
-  const { results, totalTeams, evidenceUrl } = body as {
-    results: Array<{
-      userId: string;
-      kills: number;
-      deaths: number;
-      placement: number;
-      evidenceUrl?: string;
-      notes?: string;
-    }>;
-    totalTeams: number;
+  const { results, totalTeams, evidenceUrl, eventMeta } = body as {
+    results: ResultCaptureInput[];
+    totalTeams?: number | string;
     evidenceUrl?: string;
+    eventMeta?: EventMetaInput;
   };
 
   if (!results || results.length === 0) {
@@ -74,110 +381,166 @@ export async function POST(
 
   if (!tournament) return NextResponse.json({ error: "Torneo no encontrado" }, { status: 404 });
 
-  // Compute derived fields
-  const bestKillsInTournament = Math.max(...results.map((r) => r.kills), 0);
-  const allTeamPoints = results.map((r) => (r.kills * 10) + getPlacementPoints(r.placement));
-  const bestTeamPointsInTournament = Math.max(...allTeamPoints, 0);
-  const totalKills = results.reduce((sum, r) => sum + r.kills, 0);
-  const effectiveTotalTeams = totalTeams || tournament.filledSlots || results.length;
+  const mapCount = Math.max(0, toInt(eventMeta?.mapCount, tournament.mapCount));
+  const effectiveTotalTeams = Math.max(
+    1,
+    toInt(totalTeams, 0) || inferTotalTeams(results, tournament)
+  );
+  const sourceType = eventMeta?.sourceType || "tournament_capture";
+  const sourceId = id;
+  const seasonId = eventMeta?.seasonId || "global";
+  const verified = eventMeta?.verified !== false;
+  const wasFinished = tournament.status === "finished";
 
-  // Delete old RankingMatchRecords for this tournament (for re-submission)
-  await prisma.rankingMatchRecord.deleteMany({
-    where: { tournamentId: id },
-  });
+  const derivedResults = results.map((result) => ({
+    input: result,
+    derived: deriveCapture(id, result, effectiveTotalTeams, mapCount),
+  }));
 
-  // Process each player result
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    const playerTeamPoints = (r.kills * 10) + getPlacementPoints(r.placement);
+  await prisma.rankingMatchRecord.deleteMany({ where: { tournamentId: id } });
 
-    // Upsert TournamentResult
+  for (const { input, derived } of derivedResults) {
     await prisma.tournamentResult.upsert({
-      where: { tournamentId_userId: { tournamentId: id, userId: r.userId } },
+      where: { tournamentId_userId: { tournamentId: id, userId: input.userId } },
       update: {
-        kills: r.kills,
-        deaths: r.deaths,
-        placement: r.placement,
-        teamKills: totalKills,
-        teamPoints: playerTeamPoints,
-        evidenceUrl: r.evidenceUrl || null,
-        notes: r.notes || null,
+        teamName: input.teamName || null,
+        teamNumber: input.teamNumber === null ? null : toInt(input.teamNumber, 0) || null,
+        teamGroup: input.teamGroup || null,
+        rosterSlot: Math.max(1, toInt(input.rosterSlot, 1)),
+        captainHandle: input.captainHandle || null,
+        rawHandle: input.rawHandle || null,
+        normalizedHandle: input.normalizedHandle || null,
+        kills: derived.kills,
+        deaths: derived.deaths,
+        placement: derived.storedPlacement,
+        roundsPlayed: derived.roundsPlayed,
+        averagePlacement: derived.averagePlacement,
+        averageKills: derived.averageKills,
+        teamKills: derived.teamKills,
+        teamPoints: derived.teamPoints,
+        skillPoints: derived.skillPoints,
+        rawPoints: derived.rawPoints,
+        matchpointWin: derived.matchpointWin,
+        matchpointBonus: derived.matchpointBonus,
+        ...complianceFlags(input),
+        sourceType,
+        sourceHash: derived.sourceHash,
+        captureSchemaVersion: CAPTURE_SCHEMA_VERSION,
+        roundResults: derived.roundResultsJson,
+        complianceFlags: derived.complianceFlagsJson,
+        evidenceUrl: input.evidenceUrl || evidenceUrl || null,
+        notes: input.notes || null,
       },
       create: {
         tournamentId: id,
-        userId: r.userId,
-        kills: r.kills,
-        deaths: r.deaths,
-        placement: r.placement,
-        teamKills: totalKills,
-        teamPoints: playerTeamPoints,
-        evidenceUrl: r.evidenceUrl || null,
-        notes: r.notes || null,
+        userId: input.userId,
+        teamName: input.teamName || null,
+        teamNumber: input.teamNumber === null ? null : toInt(input.teamNumber, 0) || null,
+        teamGroup: input.teamGroup || null,
+        rosterSlot: Math.max(1, toInt(input.rosterSlot, 1)),
+        captainHandle: input.captainHandle || null,
+        rawHandle: input.rawHandle || null,
+        normalizedHandle: input.normalizedHandle || null,
+        kills: derived.kills,
+        deaths: derived.deaths,
+        placement: derived.storedPlacement,
+        roundsPlayed: derived.roundsPlayed,
+        averagePlacement: derived.averagePlacement,
+        averageKills: derived.averageKills,
+        teamKills: derived.teamKills,
+        teamPoints: derived.teamPoints,
+        skillPoints: derived.skillPoints,
+        rawPoints: derived.rawPoints,
+        matchpointWin: derived.matchpointWin,
+        matchpointBonus: derived.matchpointBonus,
+        ...complianceFlags(input),
+        sourceType,
+        sourceHash: derived.sourceHash,
+        captureSchemaVersion: CAPTURE_SCHEMA_VERSION,
+        roundResults: derived.roundResultsJson,
+        complianceFlags: derived.complianceFlagsJson,
+        evidenceUrl: input.evidenceUrl || evidenceUrl || null,
+        notes: input.notes || null,
       },
     });
 
-    // Create RankingMatchRecord (feeds the scoring engine)
-    await prisma.rankingMatchRecord.create({
-      data: {
-        playerId: r.userId,
-        tournamentId: id,
-        tournamentType: tournament.tournamentType,
-        kills: r.kills,
-        deaths: r.deaths,
-        position: r.placement,
-        totalTeams: effectiveTotalTeams,
-        teamKills: totalKills,
-        teamPoints: playerTeamPoints,
-        bestKillsInTournament,
-        bestTeamPointsInTournament,
-      },
-    });
-
-    // Update tournament entry placement
     await prisma.tournamentEntry.updateMany({
-      where: { tournamentId: id, userId: r.userId },
-      data: { placement: r.placement },
+      where: { tournamentId: id, userId: input.userId },
+      data: { placement: derived.rankingPlacement },
     });
 
-    // Award XP based on placement
-    const xpReward = r.placement === 1 ? 100 : r.placement <= 3 ? 50 : 25;
-    await prisma.user.update({
-      where: { id: r.userId },
-      data: {
-        xp: { increment: xpReward },
-        seasonXp: { increment: xpReward },
-        lastSeen: new Date(),
-      },
-    });
+    if (!wasFinished) {
+      const xpReward = derived.rankingPlacement === 1 ? 100 : derived.rankingPlacement <= 3 ? 50 : 25;
+      await prisma.user.update({
+        where: { id: input.userId },
+        data: {
+          xp: { increment: xpReward },
+          seasonXp: { increment: xpReward },
+          lastSeen: new Date(),
+        },
+      });
 
-    // Create feed event per player
-    await prisma.feedEvent.create({
-      data: {
-        userId: r.userId,
-        type: r.placement === 1 ? "tournament_win" : "tournament_join",
-        title: r.placement === 1 ? "Victoria en Torneo" : `Posicion #${r.placement}`,
-        description: `Termino #${r.placement} en ${tournament.name} con ${r.kills} kills`,
-        metadata: JSON.stringify({ tournamentId: id, kills: r.kills, placement: r.placement }),
-      },
-    });
+      await prisma.feedEvent.create({
+        data: {
+          userId: input.userId,
+          type: derived.rankingPlacement === 1 ? "tournament_win" : "tournament_join",
+          title: derived.rankingPlacement === 1 ? "Victoria en Torneo" : `Posicion #${derived.rankingPlacement}`,
+          description: `Termino #${derived.rankingPlacement} en ${tournament.name} con ${derived.kills} kills`,
+          metadata: JSON.stringify({
+            tournamentId: id,
+            kills: derived.kills,
+            placement: derived.rankingPlacement,
+            skillPoints: derived.skillPoints,
+            matchpointWin: derived.matchpointWin,
+          }),
+        },
+      });
+    }
   }
 
-  // Update tournament status
   await prisma.tournament.update({
     where: { id },
     data: {
       status: "finished",
+      scoringModel: "psr",
+      captureSchemaVersion: CAPTURE_SCHEMA_VERSION,
+      mapCount,
       completedAt: new Date(),
       evidenceUrl: evidenceUrl || null,
+      captureMeta: JSON.stringify({
+        captureSchemaVersion: CAPTURE_SCHEMA_VERSION,
+        scoringModel: "psr",
+        sourceType,
+        sourceId,
+        seasonId,
+        totalTeams: effectiveTotalTeams,
+        mapCount,
+        verified,
+        submittedBy: user.id,
+        submittedAt: new Date().toISOString(),
+        legacyPlacementFormula: "teamKills * multiplier(placement), multipliers: 1=1.6, 2-5=1.4, 6-10=1.2, 11+=1, 0=0",
+        matchpointTarget: MATCHPOINT_TARGET,
+        matchpointBonusExcludedFromPsr: true,
+      }),
     },
   });
 
-  // Prize distribution for winner (1st place gets 90% of prize pool)
-  if (tournament.prizePool > 0) {
-    const winner = results.find((r) => r.placement === 1);
+  await recreatePsrRecordsForTournament({
+    tournamentId: id,
+    tournamentType: tournament.tournamentType,
+    totalTeams: effectiveTotalTeams,
+    seasonId,
+    sourceType,
+    sourceId,
+    evidenceUrl,
+    verified,
+  });
+
+  if (!wasFinished && tournament.prizePool > 0) {
+    const winner = derivedResults.find((result) => result.derived.rankingPlacement === 1);
     if (winner) {
-      const prize = tournament.prizePool * 0.9; // 10% commission
-      const wallet = await prisma.wallet.findUnique({ where: { userId: winner.userId } });
+      const prize = tournament.prizePool * 0.9;
+      const wallet = await prisma.wallet.findUnique({ where: { userId: winner.input.userId } });
       if (wallet) {
         await prisma.wallet.update({
           where: { id: wallet.id },
@@ -196,17 +559,16 @@ export async function POST(
     }
   }
 
-  // Recalculate all rankings
-  const rankingResult = await recalculateAllRankings();
+  const rankingResult = await rebuildAndPersistPsrRankings();
 
   return NextResponse.json({
-    message: `Resultados guardados para ${results.length} jugadores. Rankings recalculados.`,
+    message: `Resultados guardados para ${results.length} jugadores. PSR reconstruido con captura ${CAPTURE_SCHEMA_VERSION}.`,
     playersProcessed: results.length,
     rankingStats: rankingResult.stats,
   });
 }
 
-/** PUT /api/admin/tournaments/[id]/results — Update individual result (correction) */
+/** PUT /api/admin/tournaments/[id]/results - Update individual result correction */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -215,57 +577,108 @@ export async function PUT(
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const body = await request.json();
-  const { userId, kills, deaths, placement, evidenceUrl, notes } = body;
+  const body = (await request.json()) as ResultCaptureInput & {
+    totalTeams?: number | string;
+    eventMeta?: EventMetaInput;
+  };
+  const { userId } = body;
 
   if (!userId) return NextResponse.json({ error: "userId requerido" }, { status: 400 });
 
-  // Update tournament result
-  await prisma.tournamentResult.update({
-    where: { tournamentId_userId: { tournamentId: id, userId } },
-    data: {
-      ...(kills !== undefined && { kills }),
-      ...(deaths !== undefined && { deaths }),
-      ...(placement !== undefined && { placement }),
-      ...(evidenceUrl !== undefined && { evidenceUrl }),
-      ...(notes !== undefined && { notes }),
-    },
-  });
-
-  // Re-process all results for this tournament to recalculate derived fields
-  const allResults = await prisma.tournamentResult.findMany({ where: { tournamentId: id } });
   const tournament = await prisma.tournament.findUnique({ where: { id } });
   if (!tournament) return NextResponse.json({ error: "Torneo no encontrado" }, { status: 404 });
 
-  const bestKills = Math.max(...allResults.map((r) => r.kills), 0);
-  const allTP = allResults.map((r) => (r.kills * 10) + getPlacementPoints(r.placement));
-  const bestTP = Math.max(...allTP, 0);
-  const totalK = allResults.reduce((sum, r) => sum + r.kills, 0);
+  const existing = await prisma.tournamentResult.findUnique({
+    where: { tournamentId_userId: { tournamentId: id, userId } },
+  });
+  if (!existing) return NextResponse.json({ error: "Resultado no encontrado" }, { status: 404 });
 
-  // Delete and recreate all ranking records for this tournament
-  await prisma.rankingMatchRecord.deleteMany({ where: { tournamentId: id } });
+  const merged: ResultCaptureInput = {
+    userId,
+    teamName: body.teamName ?? existing.teamName,
+    teamNumber: body.teamNumber ?? existing.teamNumber,
+    teamGroup: body.teamGroup ?? existing.teamGroup,
+    rosterSlot: body.rosterSlot ?? existing.rosterSlot,
+    captainHandle: body.captainHandle ?? existing.captainHandle,
+    rawHandle: body.rawHandle ?? existing.rawHandle,
+    normalizedHandle: body.normalizedHandle ?? existing.normalizedHandle,
+    kills: body.kills ?? existing.kills,
+    deaths: body.deaths ?? existing.deaths,
+    placement: body.placement ?? existing.placement,
+    roundsPlayed: body.roundsPlayed ?? existing.roundsPlayed,
+    averagePlacement: body.averagePlacement ?? existing.averagePlacement,
+    averageKills: body.averageKills ?? existing.averageKills,
+    teamKills: body.teamKills ?? existing.teamKills,
+    teamPoints: body.teamPoints ?? existing.teamPoints,
+    skillPoints: body.skillPoints ?? existing.skillPoints,
+    rawPoints: body.rawPoints ?? existing.rawPoints,
+    matchpointWin: body.matchpointWin ?? existing.matchpointWin,
+    matchpointBonus: body.matchpointBonus ?? existing.matchpointBonus,
+    paymentVerified: body.paymentVerified ?? existing.paymentVerified,
+    discordVerified: body.discordVerified ?? existing.discordVerified,
+    photoVerified: body.photoVerified ?? existing.photoVerified,
+    flyerVerified: body.flyerVerified ?? existing.flyerVerified,
+    rulesAccepted: body.rulesAccepted ?? existing.rulesAccepted,
+    adminVerified: body.adminVerified ?? existing.adminVerified,
+    roundResults: body.roundResults ?? existing.roundResults,
+    evidenceUrl: body.evidenceUrl ?? existing.evidenceUrl,
+    notes: body.notes ?? existing.notes,
+  };
 
-  for (const r of allResults) {
-    const tp = (r.kills * 10) + getPlacementPoints(r.placement);
-    await prisma.rankingMatchRecord.create({
-      data: {
-        playerId: r.userId,
-        tournamentId: id,
-        tournamentType: tournament.tournamentType,
-        kills: r.kills,
-        deaths: r.deaths,
-        position: r.placement,
-        totalTeams: tournament.filledSlots || allResults.length,
-        teamKills: totalK,
-        teamPoints: tp,
-        bestKillsInTournament: bestKills,
-        bestTeamPointsInTournament: bestTP,
-      },
-    });
-  }
+  const totalTeams = Math.max(
+    1,
+    toInt(body.totalTeams, 0) || tournament.maxSlots || tournament.filledSlots || 1
+  );
+  const mapCount = Math.max(0, toInt(body.eventMeta?.mapCount, tournament.mapCount));
+  const derived = deriveCapture(id, merged, totalTeams, mapCount);
 
-  // Recalculate rankings
-  await recalculateAllRankings();
+  await prisma.tournamentResult.update({
+    where: { tournamentId_userId: { tournamentId: id, userId } },
+    data: {
+      teamName: merged.teamName || null,
+      teamNumber: merged.teamNumber === null ? null : toInt(merged.teamNumber, 0) || null,
+      teamGroup: merged.teamGroup || null,
+      rosterSlot: Math.max(1, toInt(merged.rosterSlot, 1)),
+      captainHandle: merged.captainHandle || null,
+      rawHandle: merged.rawHandle || null,
+      normalizedHandle: merged.normalizedHandle || null,
+      kills: derived.kills,
+      deaths: derived.deaths,
+      placement: derived.storedPlacement,
+      roundsPlayed: derived.roundsPlayed,
+      averagePlacement: derived.averagePlacement,
+      averageKills: derived.averageKills,
+      teamKills: derived.teamKills,
+      teamPoints: derived.teamPoints,
+      skillPoints: derived.skillPoints,
+      rawPoints: derived.rawPoints,
+      matchpointWin: derived.matchpointWin,
+      matchpointBonus: derived.matchpointBonus,
+      ...complianceFlags(merged),
+      sourceType: body.eventMeta?.sourceType || existing.sourceType,
+      sourceHash: derived.sourceHash,
+      captureSchemaVersion: CAPTURE_SCHEMA_VERSION,
+      roundResults: derived.roundResultsJson,
+      complianceFlags: derived.complianceFlagsJson,
+      evidenceUrl: merged.evidenceUrl || null,
+      notes: merged.notes || null,
+    },
+  });
 
-  return NextResponse.json({ message: "Resultado actualizado y rankings recalculados" });
+  await recreatePsrRecordsForTournament({
+    tournamentId: id,
+    tournamentType: tournament.tournamentType,
+    totalTeams,
+    seasonId: body.eventMeta?.seasonId || "global",
+    sourceType: body.eventMeta?.sourceType || "tournament_capture",
+    sourceId: id,
+    evidenceUrl: merged.evidenceUrl,
+    verified: body.eventMeta?.verified !== false,
+  });
+
+  await rebuildAndPersistPsrRankings();
+
+  return NextResponse.json({
+    message: `Resultado actualizado y PSR reconstruido con captura ${CAPTURE_SCHEMA_VERSION}.`,
+  });
 }

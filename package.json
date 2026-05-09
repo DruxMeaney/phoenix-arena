@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:psr-demo": "npx tsx prisma/seed-psr-demo.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",

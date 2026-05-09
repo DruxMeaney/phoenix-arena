@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getPlayerPsrHistory } from "@/lib/ranking/player-history";
 
 /** GET /api/community/[id] — Get public profile of a user */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const { searchParams } = new URL(request.url);
+  const days = Math.max(7, Math.min(365, Number(searchParams.get("days") || 30)));
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -41,10 +44,12 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const psrHistory = await getPlayerPsrHistory(id, { days, limit: 100 });
 
   return NextResponse.json({
     ...user,
     isOnline: user.lastSeen >= fiveMinAgo,
     level: Math.floor(user.xp / 100),
+    psrHistory,
   });
 }

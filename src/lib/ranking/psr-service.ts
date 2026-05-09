@@ -47,10 +47,16 @@ function toPlayers(users: UserWithRecords[]): PsrPlayerInput[] {
 }
 
 function recordSourceId(record: MatchRecord): string {
-  return record.eventId || record.sourceId || record.id;
+  return record.eventId || record.sourceId || record.tournamentId || record.id;
 }
 
 function recordToEventEntry(record: MatchRecord, user: UserWithRecords) {
+  const roundsPlayed = Math.max(0, record.roundsPlayed ?? 0);
+  const skillPoints =
+    record.skillPoints && record.skillPoints > 0
+      ? record.skillPoints
+      : record.teamPoints;
+
   return {
     playerId: user.id,
     nombre: user.username,
@@ -58,8 +64,22 @@ function recordToEventEntry(record: MatchRecord, user: UserWithRecords) {
     totalTeams: Math.max(1, record.totalTeams),
     kills: Math.max(0, record.kills),
     deaths: Math.max(0, record.deaths),
+    roundsPlayed,
+    averagePlacement: Math.max(0, record.averagePlacement ?? 0),
+    averageKills: Math.max(
+      0,
+      record.averageKills && record.averageKills > 0
+        ? record.averageKills
+        : roundsPlayed > 0
+          ? record.kills / roundsPlayed
+          : 0
+    ),
     teamKills: Math.max(0, record.teamKills),
     teamPoints: Math.max(0, record.teamPoints),
+    skillPoints: Math.max(0, skillPoints),
+    rawPoints: Math.max(0, record.rawPoints ?? 0),
+    matchpointWin: record.matchpointWin ?? false,
+    matchpointBonus: Math.max(0, record.matchpointBonus ?? 0),
     bestKillsInTournament: Math.max(0, record.bestKillsInTournament),
     bestTeamPointsInTournament: Math.max(0, record.bestTeamPointsInTournament),
   };
@@ -83,8 +103,8 @@ function buildPsrEvents(users: UserWithRecords[]): PsrEvent[] {
           sourceType,
           sourceId,
           seasonId: record.seasonId || "global",
-          tournamentId: null,
-          matchId: record.eventId ?? null,
+          tournamentId: record.tournamentId,
+          matchId: record.tournamentId ? null : record.eventId ?? null,
           tournamentType: record.tournamentType,
           occurredAt: record.date,
           evidenceUrl: record.evidenceUrl,
@@ -150,8 +170,15 @@ function eventPayload(event: PsrEvent) {
       totalTeams: entry.totalTeams,
       kills: entry.kills,
       deaths: entry.deaths,
+      roundsPlayed: entry.roundsPlayed ?? 0,
+      averagePlacement: entry.averagePlacement ?? 0,
+      averageKills: entry.averageKills ?? 0,
       teamKills: entry.teamKills,
       teamPoints: entry.teamPoints,
+      skillPoints: entry.skillPoints ?? entry.teamPoints,
+      rawPoints: entry.rawPoints ?? entry.teamPoints,
+      matchpointWin: entry.matchpointWin ?? false,
+      matchpointBonus: entry.matchpointBonus ?? 0,
     })),
   };
 }
@@ -163,14 +190,14 @@ async function ensureModelVersion() {
       status: "shadow",
       parameters: JSON.stringify(DEFAULT_PSR_CONFIG),
       description:
-        "Phoenix Skill Rating: modelo bayesiano conservador inspirado en TrueSkill/OpenSkill.",
+        "Phoenix Skill Rating: modelo bayesiano conservador inspirado en TrueSkill/OpenSkill, enriquecido con captura historica 00_old.",
     },
     create: {
       version: PSR_MODEL_VERSION,
       status: "shadow",
       parameters: JSON.stringify(DEFAULT_PSR_CONFIG),
       description:
-        "Phoenix Skill Rating: modelo bayesiano conservador inspirado en TrueSkill/OpenSkill.",
+        "Phoenix Skill Rating: modelo bayesiano conservador inspirado en TrueSkill/OpenSkill, enriquecido con captura historica 00_old.",
     },
   });
 }

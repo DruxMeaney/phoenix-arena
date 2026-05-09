@@ -171,24 +171,30 @@ model Dispute {
 
 // ── Tournaments ──────────────────────────────────────────────────
 model Tournament {
-  id             String    @id @default(cuid())
-  name           String
-  game           String    @default("Warzone")
-  format         String
-  tournamentType String    @default("detri")
-  entryFee       Float
-  prizePool      Float     @default(0)
-  maxSlots       Int
-  filledSlots    Int       @default(0)
-  status         String    @default("registration")
-  description    String?
-  rules          String?
-  evidenceUrl    String?
-  createdById    String?
-  startDate      DateTime?
-  completedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  name                 String
+  game                 String    @default("Warzone")
+  format               String
+  tournamentType       String    @default("detri")
+  entryFee             Float
+  prizePool            Float     @default(0)
+  maxSlots             Int
+  filledSlots          Int       @default(0)
+  status               String    @default("registration")
+  scoringModel         String    @default("psr")
+  captureSchemaVersion String    @default("psr-legacy-v1")
+  mapCount             Int       @default(0)
+  ranked               Boolean   @default(true)
+  psrWeight            Float     @default(1)
+  captureMeta          String?
+  description          String?
+  rules                String?
+  evidenceUrl          String?
+  createdById          String?
+  startDate            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   creator User?              @relation("TournamentCreator", fields: [createdById], references: [id])
   entries TournamentEntry[]
@@ -229,8 +235,21 @@ model RankingMatchRecord {
   deaths                     Int       @default(0)
   position                   Int       @default(1)
   totalTeams                 Int       @default(1)
+  teamName                   String?
+  teamNumber                 Int?
+  teamGroup                  String?
+  roundsPlayed               Int       @default(0)
+  averagePlacement           Float     @default(0)
+  averageKills               Float     @default(0)
   teamKills                  Int       @default(0)
   teamPoints                 Float     @default(0)
+  skillPoints                Float     @default(0)
+  rawPoints                  Float     @default(0)
+  matchpointWin              Boolean   @default(false)
+  matchpointBonus            Float     @default(0)
+  captureSchemaVersion       String    @default("psr-legacy-v1")
+  roundResults               String?
+  complianceFlags            String?
   bestKillsInTournament      Int       @default(0)
   bestTeamPointsInTournament Float     @default(0)
 
@@ -238,6 +257,7 @@ model RankingMatchRecord {
 
   @@index([tournamentId])
   @@index([eventId])
+  @@index([sourceType, sourceId])
   @@index([seasonId, modelVersion])
   @@index([playerId, date])
 }
@@ -397,23 +417,50 @@ model LadderEntry {
 
 // ── Tournament Results (Admin-captured per-player data) ─────────
 model TournamentResult {
-  id           String   @id @default(cuid())
-  tournamentId String
-  userId       String
-  kills        Int      @default(0)
-  deaths       Int      @default(0)
-  placement    Int      @default(0)
-  teamKills    Int      @default(0)
-  teamPoints   Float    @default(0)
-  evidenceUrl  String?
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  tournamentId         String
+  userId               String
+  teamName             String?
+  teamNumber           Int?
+  teamGroup            String?
+  rosterSlot           Int      @default(1)
+  captainHandle        String?
+  rawHandle            String?
+  normalizedHandle     String?
+  kills                Int      @default(0)
+  deaths               Int      @default(0)
+  placement            Int      @default(0)
+  roundsPlayed         Int      @default(0)
+  averagePlacement     Float    @default(0)
+  averageKills         Float    @default(0)
+  teamKills            Int      @default(0)
+  teamPoints           Float    @default(0)
+  skillPoints          Float    @default(0)
+  rawPoints            Float    @default(0)
+  matchpointWin        Boolean  @default(false)
+  matchpointBonus      Float    @default(0)
+  paymentVerified      Boolean  @default(false)
+  discordVerified      Boolean  @default(false)
+  photoVerified        Boolean  @default(false)
+  flyerVerified        Boolean  @default(false)
+  rulesAccepted        Boolean  @default(false)
+  adminVerified        Boolean  @default(false)
+  sourceType           String   @default("admin_capture")
+  sourceHash           String?
+  captureSchemaVersion String   @default("psr-legacy-v1")
+  roundResults         String?
+  complianceFlags      String?
+  evidenceUrl          String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   tournament Tournament @relation(fields: [tournamentId], references: [id])
   user       User       @relation(fields: [userId], references: [id])
 
   @@unique([tournamentId, userId])
+  @@index([teamNumber])
+  @@index([sourceType, sourceHash])
 }
 
 // ── Store Items (Dynamic product catalog) ────────────────────────

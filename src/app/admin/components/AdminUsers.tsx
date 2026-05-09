@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import PlayerPsrHistoryView from "@/components/player-psr-history";
+import type { PlayerPsrHistory } from "@/lib/ranking/player-history";
 
 function adminFetch(url: string, options: RequestInit = {}) {
   const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
@@ -15,6 +17,95 @@ function adminFetch(url: string, options: RequestInit = {}) {
 }
 
 type FilterMode = "todos" | "activos" | "flagged";
+
+interface AdminTransaction {
+  id?: string;
+  type?: string;
+  amount: number;
+  description?: string;
+  createdAt?: string;
+}
+
+interface AdminWallet {
+  balance?: number;
+  heldBalance?: number;
+  transactions?: AdminTransaction[];
+}
+
+interface AdminMatchRecord {
+  id?: string;
+  sourceType?: string;
+  tournamentType?: string;
+  date?: string;
+  position?: number;
+  kills?: number;
+  teamPoints?: number;
+  skillPoints?: number;
+}
+
+interface AdminTournamentResult {
+  id?: string;
+  tournament?: { id: string; name: string };
+  name?: string;
+  tournamentName?: string;
+  placement?: number;
+  kills?: number;
+  skillPoints?: number;
+  prize?: number;
+  winnings?: number;
+}
+
+interface AdminDispute {
+  id?: string;
+  reason?: string;
+  status?: string;
+}
+
+interface AdminUser {
+  _id?: string;
+  id: string;
+  username: string;
+  email?: string | null;
+  avatar?: string | null;
+  discordId?: string | null;
+  role?: string;
+  status?: string;
+  tier?: string;
+  peakScore?: number;
+  psrScore?: number;
+  psrMu?: number;
+  psrSigma?: number;
+  psrMatches?: number;
+  peakPsr?: number;
+  psrModelVersion?: string;
+  trustScore?: number;
+  trustLevel?: string;
+  isFlagged?: boolean;
+  flagged?: boolean;
+  xp?: number;
+  region?: string;
+  platform?: string;
+  activisionId?: string | null;
+  createdAt?: string;
+  lastSeen?: string;
+  balance?: number;
+  heldBalance?: number;
+  matchCount?: number;
+  totalMatches?: number;
+  tournamentCount?: number;
+  totalTournaments?: number;
+  disputeCount?: number;
+  wallet?: AdminWallet | null;
+  transactions?: AdminTransaction[];
+  matchRecords?: AdminMatchRecord[];
+  matches?: AdminMatchRecord[];
+  tournamentResults?: AdminTournamentResult[];
+  tournamentHistory?: AdminTournamentResult[];
+  tournaments?: AdminTournamentResult[];
+  disputesAsReporter?: AdminDispute[];
+  disputes?: AdminDispute[];
+  psrHistory?: PlayerPsrHistory | null;
+}
 
 function tierBadgeClass(tier: string) {
   const t = (tier || "").toLowerCase();
@@ -32,15 +123,15 @@ function statusColor(status: string) {
 }
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("todos");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ role: "player", status: "active", tier: "", flagged: false });
+  const [editForm, setEditForm] = useState({ role: "player", status: "active", tier: "", isFlagged: false });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
@@ -52,8 +143,8 @@ export default function AdminUsers() {
       if (!res.ok) throw new Error("Error al cargar usuarios");
       const data = await res.json();
       setUsers(data.users || data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar usuarios");
     } finally {
       setLoading(false);
     }
@@ -66,11 +157,11 @@ export default function AdminUsers() {
   const filteredUsers = users.filter((u) => {
     const matchSearch = !search || (u.username || "").toLowerCase().includes(search.toLowerCase());
     if (filter === "activos") return matchSearch && ((u.status || "").toLowerCase() === "active" || (u.status || "").toLowerCase() === "activo");
-    if (filter === "flagged") return matchSearch && u.flagged;
+    if (filter === "flagged") return matchSearch && (u.isFlagged || u.flagged);
     return matchSearch;
   });
 
-  const openDetail = async (user: any) => {
+  const openDetail = async (user: AdminUser) => {
     try {
       setDetailLoading(true);
       setSelectedUser(user);
@@ -95,7 +186,7 @@ export default function AdminUsers() {
       role: selectedUser.role || "player",
       status: selectedUser.status || "active",
       tier: selectedUser.tier || "",
-      flagged: selectedUser.flagged || false,
+      isFlagged: selectedUser.isFlagged || selectedUser.flagged || false,
     });
     setEditing(true);
   };
@@ -120,8 +211,8 @@ export default function AdminUsers() {
       setMessage({ type: "success", text: "Usuario actualizado" });
       setEditing(false);
       fetchUsers();
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message });
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "Error al actualizar usuario" });
     } finally {
       setSaving(false);
     }
@@ -155,8 +246,8 @@ export default function AdminUsers() {
     const wallet = u.wallet || {};
     const transactions = wallet.transactions || u.transactions || [];
     const matchRecords = u.matchRecords || u.matches || [];
-    const tournamentHistory = u.tournamentHistory || u.tournaments || [];
-    const disputes = u.disputes || [];
+    const tournamentHistory = u.tournamentResults || u.tournamentHistory || u.tournaments || [];
+    const disputes = u.disputesAsReporter || u.disputes || [];
 
     return (
       <div className="space-y-6">
@@ -165,7 +256,7 @@ export default function AdminUsers() {
             &larr; Volver
           </button>
           <h2 className="text-lg font-bold text-foreground">{u.username}</h2>
-          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${tierBadgeClass(u.tier)}`}>{u.tier}</span>
+          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${tierBadgeClass(u.tier || "Detri")}`}>{u.tier || "Detri"}</span>
         </div>
 
         {message.text && (
@@ -185,12 +276,13 @@ export default function AdminUsers() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div><span className="text-xs text-muted uppercase">Email</span><p className="text-sm text-foreground">{u.email || "-"}</p></div>
                 <div><span className="text-xs text-muted uppercase">Rol</span><p className="text-sm text-foreground">{u.role || "player"}</p></div>
-                <div><span className="text-xs text-muted uppercase">Estado</span><p className="text-sm"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(u.status)}`}>{u.status}</span></p></div>
+                <div><span className="text-xs text-muted uppercase">Estado</span><p className="text-sm"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(u.status || "active")}`}>{u.status || "active"}</span></p></div>
                 <div><span className="text-xs text-muted uppercase">Region</span><p className="text-sm text-foreground">{u.region || "-"}</p></div>
-                <div><span className="text-xs text-muted uppercase">Score</span><p className="text-sm font-bold text-foreground">{u.score ?? 0}</p></div>
+                <div><span className="text-xs text-muted uppercase">PSR</span><p className="text-sm font-bold text-foreground">{(u.psrScore ?? 0).toFixed(1)}</p></div>
+                <div><span className="text-xs text-muted uppercase">Mu / Sigma</span><p className="text-sm font-bold text-foreground">{(u.psrMu ?? 0).toFixed(1)} / {(u.psrSigma ?? 0).toFixed(1)}</p></div>
                 <div><span className="text-xs text-muted uppercase">XP</span><p className="text-sm font-bold text-foreground">{u.xp ?? 0}</p></div>
                 <div><span className="text-xs text-muted uppercase">Balance</span><p className="text-sm font-bold text-green-400">${wallet.balance ?? u.balance ?? 0}</p></div>
-                <div><span className="text-xs text-muted uppercase">Flagged</span><p className="text-sm text-foreground">{u.flagged ? "Si" : "No"}</p></div>
+                <div><span className="text-xs text-muted uppercase">Flagged</span><p className="text-sm text-foreground">{u.isFlagged || u.flagged ? "Si" : "No"}</p></div>
               </div>
             </div>
 
@@ -220,7 +312,7 @@ export default function AdminUsers() {
                   </div>
                   <div className="flex items-end">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={editForm.flagged} onChange={(e) => setEditForm({ ...editForm, flagged: e.target.checked })} className="w-4 h-4 rounded border-border bg-surface-2 accent-red-500" />
+                      <input type="checkbox" checked={editForm.isFlagged} onChange={(e) => setEditForm({ ...editForm, isFlagged: e.target.checked })} className="w-4 h-4 rounded border-border bg-surface-2 accent-red-500" />
                       <span className="text-sm text-foreground">Flagged</span>
                     </label>
                   </div>
@@ -242,18 +334,20 @@ export default function AdminUsers() {
               </button>
             )}
 
+            <PlayerPsrHistoryView history={u.psrHistory} compact={false} />
+
             {/* Recent Transactions */}
             {transactions.length > 0 && (
               <div className="bg-surface border border-border rounded-xl p-5">
                 <h3 className="font-bold text-foreground mb-3 text-sm">Transacciones Recientes</h3>
                 <div className="space-y-2">
-                  {transactions.slice(0, 10).map((tx: any, i: number) => (
+                  {transactions.slice(0, 10).map((tx, i) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                       <div>
                         <p className="text-sm text-foreground">{tx.description || tx.type}</p>
                         <p className="text-xs text-muted">{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : ""}</p>
                       </div>
-                      <span className={`text-sm font-semibold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <span className={`text-sm font-semibold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
                         {tx.amount >= 0 ? "+" : ""}${Math.abs(tx.amount)}
                       </span>
                     </div>
@@ -270,19 +364,21 @@ export default function AdminUsers() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-xs text-muted uppercase border-b border-border">
-                        <th className="pb-2 pr-4 font-semibold">Juego</th>
-                        <th className="pb-2 pr-4 font-semibold">Resultado</th>
-                        <th className="pb-2 pr-4 font-semibold">Monto</th>
+                        <th className="pb-2 pr-4 font-semibold">Fuente</th>
+                        <th className="pb-2 pr-4 font-semibold">Placement</th>
+                        <th className="pb-2 pr-4 font-semibold">Kills</th>
+                        <th className="pb-2 pr-4 font-semibold">Skill</th>
                         <th className="pb-2 font-semibold">Fecha</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {matchRecords.slice(0, 10).map((m: any, i: number) => (
+                      {matchRecords.slice(0, 10).map((m, i) => (
                         <tr key={i} className="border-b border-border/50">
-                          <td className="py-2 pr-4 text-foreground">{m.game || "-"}</td>
-                          <td className="py-2 pr-4"><span className={`text-xs font-semibold ${m.result === "win" ? "text-green-400" : "text-red-400"}`}>{m.result === "win" ? "Victoria" : "Derrota"}</span></td>
-                          <td className="py-2 pr-4 text-foreground">${m.amount || 0}</td>
-                          <td className="py-2 text-xs text-muted">{m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "-"}</td>
+                          <td className="py-2 pr-4 text-foreground">{m.sourceType || m.tournamentType || "-"}</td>
+                          <td className="py-2 pr-4 text-foreground">#{m.position || "-"}</td>
+                          <td className="py-2 pr-4 text-foreground">{m.kills ?? 0}</td>
+                          <td className="py-2 pr-4 text-foreground">{(m.skillPoints ?? m.teamPoints ?? 0).toFixed(1)}</td>
+                          <td className="py-2 text-xs text-muted">{m.date ? new Date(m.date).toLocaleDateString() : "-"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -296,10 +392,10 @@ export default function AdminUsers() {
               <div className="bg-surface border border-border rounded-xl p-5">
                 <h3 className="font-bold text-foreground mb-3 text-sm">Historial de Torneos ({tournamentHistory.length})</h3>
                 <div className="space-y-2">
-                  {tournamentHistory.slice(0, 10).map((t: any, i: number) => (
+                  {tournamentHistory.slice(0, 10).map((t, i) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                       <div>
-                        <p className="text-sm text-foreground">{t.name || t.tournamentName || "Torneo"}</p>
+                        <p className="text-sm text-foreground">{t.tournament?.name || t.name || t.tournamentName || "Torneo"}</p>
                         <p className="text-xs text-muted">Placement: #{t.placement || "-"}</p>
                       </div>
                       <span className="text-sm font-semibold text-foreground">${t.prize || t.winnings || 0}</span>
@@ -314,7 +410,7 @@ export default function AdminUsers() {
               <div className="bg-surface border border-border rounded-xl p-5">
                 <h3 className="font-bold text-foreground mb-3 text-sm">Disputas ({disputes.length})</h3>
                 <div className="space-y-2">
-                  {disputes.map((d: any, i: number) => (
+                  {disputes.map((d, i) => (
                     <div key={i} className="py-2 border-b border-border/50 last:border-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-foreground">{d.reason || "Disputa"}</p>
@@ -383,7 +479,7 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((u: any, i: number) => (
+              {filteredUsers.map((u, i) => (
                 <tr key={u._id || u.id || i} className="border-b border-border/50 hover:bg-surface-2/60 transition-colors cursor-pointer" onClick={() => openDetail(u)}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -397,16 +493,16 @@ export default function AdminUsers() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${tierBadgeClass(u.tier)}`}>{u.tier}</span>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${tierBadgeClass(u.tier || "Detri")}`}>{u.tier || "Detri"}</span>
                   </td>
-                  <td className="px-4 py-3 text-foreground font-medium">{u.score ?? 0}</td>
+                  <td className="px-4 py-3 text-foreground font-medium">{(u.psrScore ?? u.peakScore ?? 0).toFixed(1)}</td>
                   <td className="px-4 py-3 text-muted">{u.xp ?? 0}</td>
                   <td className="px-4 py-3 text-foreground font-medium">${u.balance ?? 0}</td>
                   <td className="px-4 py-3 text-muted text-xs">{u.region || "-"}</td>
                   <td className="px-4 py-3 text-muted">{u.matchCount ?? u.totalMatches ?? 0}</td>
                   <td className="px-4 py-3 text-muted">{u.tournamentCount ?? u.totalTournaments ?? 0}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(u.status)}`}>{u.status}</span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(u.status || "active")}`}>{u.status || "active"}</span>
                   </td>
                   <td className="px-4 py-3">
                     <button

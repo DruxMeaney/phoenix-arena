@@ -77,8 +77,15 @@ export interface PsrEventEntry {
   totalTeams: number;
   kills: number;
   deaths: number;
+  roundsPlayed?: number;
+  averagePlacement?: number;
+  averageKills?: number;
   teamKills: number;
   teamPoints: number;
+  skillPoints?: number;
+  rawPoints?: number;
+  matchpointWin?: boolean;
+  matchpointBonus?: number;
   bestKillsInTournament: number;
   bestTeamPointsInTournament: number;
 }
@@ -129,6 +136,12 @@ export interface PsrDelta {
     performanceAdjustment: number;
     calibrationMatch: number;
     verified: boolean;
+    roundsPlayed: number;
+    averagePlacement: number;
+    averageKills: number;
+    skillPoints: number;
+    rawPoints: number;
+    matchpointWin: boolean;
   };
 }
 
@@ -244,12 +257,41 @@ function entryPlacementScore(entry: PsrEventEntry, eventSize: number): number {
   return clamp((totalTeams - entry.placement) / (totalTeams - 1), 0, 1);
 }
 
+function entryAveragePlacementScore(entry: PsrEventEntry, eventSize: number): number {
+  const totalTeams = Math.max(entry.totalTeams, eventSize, 1);
+  const averagePlacement =
+    typeof entry.averagePlacement === "number" && entry.averagePlacement > 0
+      ? entry.averagePlacement
+      : entry.placement;
+
+  if (totalTeams <= 1) return 0.5;
+  return clamp((totalTeams - averagePlacement) / (totalTeams - 1), 0, 1);
+}
+
+function roundsPlayed(entry: PsrEventEntry): number {
+  return Math.max(1, entry.roundsPlayed ?? 0);
+}
+
+function averageKills(entry: PsrEventEntry): number {
+  if (typeof entry.averageKills === "number" && entry.averageKills > 0) {
+    return entry.averageKills;
+  }
+
+  return Math.max(0, entry.kills) / roundsPlayed(entry);
+}
+
+function skillPoints(entry: PsrEventEntry): number {
+  return Math.max(0, entry.skillPoints && entry.skillPoints > 0 ? entry.skillPoints : entry.teamPoints);
+}
+
 function performanceSignal(entry: PsrEventEntry, event: PsrEvent, config: PsrConfig): number {
-  const maxKills = Math.max(1, ...event.entries.map((candidate) => candidate.kills));
-  const maxTeamPoints = Math.max(1, ...event.entries.map((candidate) => candidate.teamPoints));
-  const placement = entryPlacementScore(entry, event.entries.length);
-  const kills = Math.log1p(Math.max(0, entry.kills)) / Math.log1p(maxKills);
-  const team = Math.max(0, entry.teamPoints) / maxTeamPoints;
+  const maxAverageKills = Math.max(1, ...event.entries.map((candidate) => averageKills(candidate)));
+  const maxSkillPoints = Math.max(1, ...event.entries.map((candidate) => skillPoints(candidate)));
+  const finalPlacement = entryPlacementScore(entry, event.entries.length);
+  const mapPlacement = entryAveragePlacementScore(entry, event.entries.length);
+  const placement = 0.72 * finalPlacement + 0.28 * mapPlacement;
+  const kills = Math.log1p(averageKills(entry)) / Math.log1p(maxAverageKills);
+  const team = skillPoints(entry) / maxSkillPoints;
 
   return clamp(
     config.performance.placementWeight * placement +
@@ -358,6 +400,12 @@ function applySoloEvidence(
         performanceAdjustment: round(performanceAdjustment),
         calibrationMatch: nextState.matchesPlayed,
         verified: event.verified,
+        roundsPlayed: roundsPlayed(entry),
+        averagePlacement: round(entry.averagePlacement ?? entry.placement),
+        averageKills: round(averageKills(entry)),
+        skillPoints: round(skillPoints(entry)),
+        rawPoints: round(entry.rawPoints ?? skillPoints(entry)),
+        matchpointWin: entry.matchpointWin ?? false,
       },
     },
   };
@@ -492,6 +540,12 @@ export function applyPsrEvent(
           performanceAdjustment: round(performanceAdjustment),
           calibrationMatch: nextState.matchesPlayed,
           verified: event.verified,
+          roundsPlayed: roundsPlayed(entry),
+          averagePlacement: round(entry.averagePlacement ?? entry.placement),
+          averageKills: round(averageKills(entry)),
+          skillPoints: round(skillPoints(entry)),
+          rawPoints: round(entry.rawPoints ?? skillPoints(entry)),
+          matchpointWin: entry.matchpointWin ?? false,
         },
       });
     }
@@ -509,6 +563,15 @@ export function applyPsrEvent(
         playerId: entry.playerId,
         placement: entry.placement,
         kills: entry.kills,
+        deaths: entry.deaths,
+        roundsPlayed: entry.roundsPlayed ?? 0,
+        averagePlacement: entry.averagePlacement ?? 0,
+        averageKills: entry.averageKills ?? 0,
+        teamKills: entry.teamKills,
+        teamPoints: entry.teamPoints,
+        skillPoints: entry.skillPoints ?? 0,
+        rawPoints: entry.rawPoints ?? 0,
+        matchpointWin: entry.matchpointWin ?? false,
       })),
     },
     deltas: deltas.map((delta) => ({
