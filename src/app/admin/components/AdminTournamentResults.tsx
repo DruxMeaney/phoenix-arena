@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 function adminFetch(url: string, options: RequestInit = {}) {
   const pass = typeof window !== "undefined" ? sessionStorage.getItem("phoenix_admin_pass") || "" : "";
@@ -17,60 +17,161 @@ function adminFetch(url: string, options: RequestInit = {}) {
 interface PlayerResult {
   userId: string;
   username: string;
+  teamName: string;
+  teamNumber: number;
+  teamGroup: string;
   kills: number;
   deaths: number;
   placement: number;
+  roundsPlayed: number;
+  averagePlacement: number;
+  averageKills: number;
+  teamKills: number;
+  skillPoints: number;
+  rawPoints: number;
+  matchpointWin: boolean;
+  paymentVerified: boolean;
+  discordVerified: boolean;
+  photoVerified: boolean;
+  flyerVerified: boolean;
+  rulesAccepted: boolean;
+  adminVerified: boolean;
+}
+
+type ComplianceField =
+  | "paymentVerified"
+  | "discordVerified"
+  | "rulesAccepted"
+  | "photoVerified"
+  | "flyerVerified"
+  | "adminVerified";
+
+interface TournamentEntryForResults {
+  _id?: string;
+  userId?: string;
+  username?: string;
+  user?: {
+    id?: string;
+    username?: string;
+  };
+}
+
+interface TournamentExistingResult {
+  userId: string;
+  teamName?: string | null;
+  teamNumber?: number | null;
+  teamGroup?: string | null;
+  kills?: number;
+  deaths?: number;
+  placement?: number;
+  roundsPlayed?: number;
+  averagePlacement?: number;
+  averageKills?: number;
+  teamKills?: number;
+  teamPoints?: number;
+  skillPoints?: number;
+  rawPoints?: number;
+  matchpointWin?: boolean;
+  paymentVerified?: boolean;
+  discordVerified?: boolean;
+  photoVerified?: boolean;
+  flyerVerified?: boolean;
+  rulesAccepted?: boolean;
+  adminVerified?: boolean;
+}
+
+interface TournamentForResults {
+  _id?: string;
+  id?: string;
+  name: string;
+  game: string;
+  format: string;
+  totalTeams?: number;
+  maxSlots?: number;
+  mapCount?: number;
+  evidenceUrl?: string | null;
+  entries?: TournamentEntryForResults[];
+  results?: TournamentExistingResult[];
 }
 
 interface Props {
-  tournament: any;
+  tournament: TournamentForResults;
   onBack: () => void;
   onSaved: () => void;
 }
 
+const complianceFields: Array<[ComplianceField, string]> = [
+  ["paymentVerified", "Pago"],
+  ["discordVerified", "Discord"],
+  ["rulesAccepted", "Reglas"],
+  ["photoVerified", "Foto"],
+  ["flyerVerified", "Flyer"],
+  ["adminVerified", "Admin"],
+];
+
 export default function AdminTournamentResults({ tournament, onBack, onSaved }: Props) {
-  const entries = tournament.entries || [];
-  const existingResults = tournament.results || [];
+  const entries = useMemo(() => tournament.entries ?? [], [tournament.entries]);
+  const existingResults = useMemo(() => tournament.results ?? [], [tournament.results]);
   const hasExisting = existingResults.length > 0;
 
   const [results, setResults] = useState<PlayerResult[]>([]);
   const [totalTeams, setTotalTeams] = useState("");
+  const [mapCount, setMapCount] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [verified, setVerified] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
   useEffect(() => {
+    const entryUserId = (entry: TournamentEntryForResults) => entry.userId || entry.user?.id || entry._id || "";
+    const entryUsername = (entry: TournamentEntryForResults) =>
+      entry.user?.username || entry.username || entry.userId || "Jugador";
+    const mapExisting = (entry: TournamentEntryForResults): PlayerResult => {
+      const userId = entryUserId(entry);
+      const existing = existingResults.find((r) => r.userId === userId);
+
+      return {
+        userId,
+        username: entryUsername(entry),
+        teamName: existing?.teamName ?? "",
+        teamNumber: existing?.teamNumber ?? 0,
+        teamGroup: existing?.teamGroup ?? "",
+        kills: existing?.kills ?? 0,
+        deaths: existing?.deaths ?? 0,
+        placement: existing?.placement || 1,
+        roundsPlayed: existing?.roundsPlayed ?? tournament.mapCount ?? 0,
+        averagePlacement: existing?.averagePlacement ?? existing?.placement ?? 1,
+        averageKills: existing?.averageKills ?? 0,
+        teamKills: existing?.teamKills ?? 0,
+        skillPoints: existing?.skillPoints ?? existing?.teamPoints ?? 0,
+        rawPoints: existing?.rawPoints ?? existing?.teamPoints ?? 0,
+        matchpointWin: existing?.matchpointWin ?? false,
+        paymentVerified: existing?.paymentVerified ?? false,
+        discordVerified: existing?.discordVerified ?? false,
+        photoVerified: existing?.photoVerified ?? false,
+        flyerVerified: existing?.flyerVerified ?? false,
+        rulesAccepted: existing?.rulesAccepted ?? false,
+        adminVerified: existing?.adminVerified ?? true,
+      };
+    };
+
     if (hasExisting) {
-      // Pre-fill with existing results
-      const mapped = entries.map((entry: any) => {
-        const existing = existingResults.find(
-          (r: any) => r.userId === (entry.userId || entry._id)
-        );
-        return {
-          userId: entry.userId || entry._id || "",
-          username: entry.username || entry.userId || "Jugador",
-          kills: existing?.kills ?? 0,
-          deaths: existing?.deaths ?? 0,
-          placement: existing?.placement ?? 1,
-        };
-      });
-      setResults(mapped);
-      setTotalTeams(String(tournament.totalTeams || entries.length));
+      setResults(entries.map(mapExisting));
+      setTotalTeams(String(tournament.totalTeams || tournament.maxSlots || entries.length));
+      setMapCount(String(tournament.mapCount || ""));
       setEvidenceUrl(tournament.evidenceUrl || "");
     } else {
-      const mapped = entries.map((entry: any) => ({
-        userId: entry.userId || entry._id || "",
-        username: entry.username || entry.userId || "Jugador",
-        kills: 0,
-        deaths: 0,
-        placement: 1,
-      }));
-      setResults(mapped);
-      setTotalTeams(String(entries.length));
+      setResults(entries.map(mapExisting));
+      setTotalTeams(String(tournament.maxSlots || entries.length));
+      setMapCount(String(tournament.mapCount || ""));
     }
-  }, [entries, existingResults, hasExisting, tournament.totalTeams, tournament.evidenceUrl]);
+  }, [entries, existingResults, hasExisting, tournament]);
 
-  const updateResult = (index: number, field: keyof PlayerResult, value: number) => {
+  const updateResult = <K extends keyof PlayerResult>(
+    index: number,
+    field: K,
+    value: PlayerResult[K]
+  ) => {
     setResults((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -78,10 +179,26 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
     });
   };
 
+  const legacyMultiplier = (placement: number) => {
+    if (placement <= 0) return 0;
+    if (placement === 1) return 1.6;
+    if (placement <= 5) return 1.4;
+    if (placement <= 10) return 1.2;
+    return 1;
+  };
+
+  const estimatedSkillPoints = (result: PlayerResult) => {
+    const placement = Math.round(result.averagePlacement || result.placement);
+    const teamKills = result.teamKills || result.kills;
+    return Math.round(teamKills * legacyMultiplier(placement) * 100) / 100;
+  };
+
   const validate = (): string | null => {
     for (const r of results) {
       if (r.placement < 1) return `Placement invalido para ${r.username}`;
       if (r.kills < 0) return `Kills no puede ser negativo para ${r.username}`;
+      if (r.teamKills < 0) return `Kills de equipo no puede ser negativo para ${r.username}`;
+      if (r.skillPoints < 0) return `Puntos skill no puede ser negativo para ${r.username}`;
     }
     return null;
   };
@@ -103,12 +220,33 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
         body: JSON.stringify({
           results: results.map((r) => ({
             userId: r.userId,
+            teamName: r.teamName,
+            teamNumber: r.teamNumber || null,
+            teamGroup: r.teamGroup,
             kills: r.kills,
             deaths: r.deaths,
             placement: r.placement,
+            roundsPlayed: r.roundsPlayed,
+            averagePlacement: r.averagePlacement || r.placement,
+            averageKills: r.averageKills || (r.roundsPlayed > 0 ? r.kills / r.roundsPlayed : r.kills),
+            teamKills: r.teamKills || r.kills,
+            skillPoints: r.skillPoints || estimatedSkillPoints(r),
+            rawPoints: r.rawPoints || (r.matchpointWin ? 999 : r.skillPoints || estimatedSkillPoints(r)),
+            matchpointWin: r.matchpointWin,
+            paymentVerified: r.paymentVerified,
+            discordVerified: r.discordVerified,
+            photoVerified: r.photoVerified,
+            flyerVerified: r.flyerVerified,
+            rulesAccepted: r.rulesAccepted,
+            adminVerified: r.adminVerified,
           })),
           totalTeams: Number(totalTeams),
           evidenceUrl,
+          eventMeta: {
+            mapCount: Number(mapCount) || 0,
+            verified,
+            sourceType: "tournament_capture",
+          },
         }),
       });
 
@@ -119,8 +257,11 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
 
       setMessage({ type: "success", text: hasExisting ? "Resultados actualizados exitosamente" : "Resultados guardados exitosamente" });
       setTimeout(() => onSaved(), 1500);
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Error al guardar resultados",
+      });
     } finally {
       setSaving(false);
     }
@@ -161,9 +302,16 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
                 <thead>
                   <tr className="bg-surface-2/50 text-left text-xs text-muted uppercase tracking-wide">
                     <th className="px-4 py-3 font-semibold">Jugador</th>
+                    <th className="px-4 py-3 font-semibold">Equipo</th>
                     <th className="px-4 py-3 font-semibold">Kills</th>
                     <th className="px-4 py-3 font-semibold">Deaths</th>
                     <th className="px-4 py-3 font-semibold">Placement</th>
+                    <th className="px-4 py-3 font-semibold">Rondas</th>
+                    <th className="px-4 py-3 font-semibold">Avg Pos</th>
+                    <th className="px-4 py-3 font-semibold">Team Kills</th>
+                    <th className="px-4 py-3 font-semibold">Skill Pts</th>
+                    <th className="px-4 py-3 font-semibold">Matchpoint</th>
+                    <th className="px-4 py-3 font-semibold">Verif.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -175,6 +323,32 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
                             {r.username[0]?.toUpperCase()}
                           </div>
                           <span className="font-medium text-foreground">{r.username}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={r.teamNumber || ""}
+                            onChange={(e) => updateResult(i, "teamNumber", Math.max(0, Number(e.target.value)))}
+                            placeholder="#"
+                            className="w-16 bg-surface-2 border border-border rounded-lg px-2 py-2 text-sm text-foreground text-center focus:outline-none focus:border-red-500 transition-colors"
+                          />
+                          <input
+                            type="text"
+                            value={r.teamName}
+                            onChange={(e) => updateResult(i, "teamName", e.target.value)}
+                            placeholder="Nombre"
+                            className="w-32 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-red-500 transition-colors"
+                          />
+                          <input
+                            type="text"
+                            value={r.teamGroup}
+                            onChange={(e) => updateResult(i, "teamGroup", e.target.value)}
+                            placeholder="Grupo"
+                            className="w-20 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-red-500 transition-colors"
+                          />
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -204,6 +378,79 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
                           className="w-20 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground text-center focus:outline-none focus:border-red-500 transition-colors"
                         />
                       </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min={0}
+                          value={r.roundsPlayed}
+                          onChange={(e) => updateResult(i, "roundsPlayed", Math.max(0, Number(e.target.value)))}
+                          className="w-20 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground text-center focus:outline-none focus:border-red-500 transition-colors"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={r.averagePlacement}
+                          onChange={(e) => updateResult(i, "averagePlacement", Math.max(0, Number(e.target.value)))}
+                          className="w-20 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground text-center focus:outline-none focus:border-red-500 transition-colors"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min={0}
+                          value={r.teamKills}
+                          onChange={(e) => updateResult(i, "teamKills", Math.max(0, Number(e.target.value)))}
+                          className="w-20 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground text-center focus:outline-none focus:border-red-500 transition-colors"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={r.skillPoints}
+                            onChange={(e) => updateResult(i, "skillPoints", Math.max(0, Number(e.target.value)))}
+                            className="w-24 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-foreground text-center focus:outline-none focus:border-red-500 transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateResult(i, "skillPoints", estimatedSkillPoints(r))}
+                            className="px-2 py-2 rounded-lg border border-border text-xs text-muted hover:text-foreground hover:border-red-500/50 transition-colors"
+                          >
+                            Calc
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <label className="inline-flex items-center gap-2 text-xs text-muted">
+                          <input
+                            type="checkbox"
+                            checked={r.matchpointWin}
+                            onChange={(e) => updateResult(i, "matchpointWin", e.target.checked)}
+                            className="h-4 w-4 accent-red-500"
+                          />
+                          MP
+                        </label>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="grid grid-cols-3 gap-1 text-[10px] text-muted">
+                          {complianceFields.map(([field, label]) => (
+                            <label key={field} className="inline-flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={r[field]}
+                                onChange={(e) => updateResult(i, field, e.target.checked)}
+                                className="h-3 w-3 accent-red-500"
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -226,6 +473,16 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
                 />
               </div>
               <div>
+                <label className="block text-xs text-muted mb-1.5">Mapas / Rondas</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={mapCount}
+                  onChange={(e) => setMapCount(e.target.value)}
+                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-red-500 transition-colors"
+                />
+              </div>
+              <div>
                 <label className="block text-xs text-muted mb-1.5">URL de Evidencia (screenshot)</label>
                 <input
                   type="text"
@@ -235,6 +492,15 @@ export default function AdminTournamentResults({ tournament, onBack, onSaved }: 
                   className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-red-500 transition-colors"
                 />
               </div>
+              <label className="flex items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={verified}
+                  onChange={(e) => setVerified(e.target.checked)}
+                  className="h-4 w-4 accent-red-500"
+                />
+                Resultado verificado para reconstruccion PSR
+              </label>
             </div>
           </div>
 

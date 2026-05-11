@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import PlayerPsrHistoryView from "@/components/player-psr-history";
+import type { PlayerPsrHistory } from "@/lib/ranking/player-history";
 
 /* ── Profile data interface ──────────────────────────────────── */
 interface ProfileData {
@@ -22,9 +24,16 @@ interface ProfileData {
   xp: number;
   seasonXp: number;
   peakScore: number;
+  psrMu: number;
+  psrSigma: number;
+  psrScore: number;
+  psrMatches: number;
+  peakPsr: number;
+  psrModelVersion: string;
   createdAt: string;
   balance: number;
   posts: Post[];
+  psrHistory: PlayerPsrHistory | null;
 }
 
 interface Post {
@@ -76,7 +85,7 @@ export default function PerfilPage() {
   const [newPost, setNewPost] = useState("");
   const [postType, setPostType] = useState("update");
   const [posting, setPosting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"feed" | "stats" | "edit">("feed");
+  const [activeTab, setActiveTab] = useState<"feed" | "stats" | "history" | "edit">("feed");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchProfile = useCallback(async () => {
@@ -96,6 +105,7 @@ export default function PerfilPage() {
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   const theme = themes[profile?.profileTheme || "neon-blue"] || themes["neon-blue"];
@@ -288,7 +298,7 @@ export default function PerfilPage() {
 
         {/* ── Tabs ────────────────────────────────────────────── */}
         <div className="flex gap-1 bg-surface/30 backdrop-blur-sm p-1.5 rounded-xl mb-8 w-fit" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 15px ${theme.accent}10` }}>
-          {(["feed", "stats", "edit"] as const).map((tab) => (
+          {(["feed", "stats", "history", "edit"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); if (tab === "edit") setEditing(true); else setEditing(false); }}
@@ -297,7 +307,7 @@ export default function PerfilPage() {
               }`}
               style={activeTab === tab ? { boxShadow: `0 0 20px ${theme.accent}40, 0 0 40px ${theme.accent}15` } : {}}
             >
-              {tab === "feed" ? "Mi Muro" : tab === "stats" ? "Estadisticas" : "Editar Perfil"}
+              {tab === "feed" ? "Mi Muro" : tab === "stats" ? "Estadisticas" : tab === "history" ? "Historial PSR" : "Editar Perfil"}
             </button>
           ))}
         </div>
@@ -392,8 +402,8 @@ export default function PerfilPage() {
               <h3 className="font-semibold mb-4">Phoenix Score</h3>
               <div className="grid sm:grid-cols-3 gap-4 mb-6">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-gradient">{profile.peakScore > 0 ? profile.peakScore.toFixed(1) : "--"}</p>
-                  <p className="text-xs text-muted mt-1">Score Final</p>
+              <p className="text-3xl font-bold text-gradient">{profile.psrScore > 0 ? profile.psrScore.toFixed(1) : "--"}</p>
+              <p className="text-xs text-muted mt-1">PSR</p>
                 </div>
                 <div className="text-center">
                   <p className="text-3xl font-bold">{profile.xp > 0 ? Math.floor(profile.xp / 100) : "--"}</p>
@@ -406,7 +416,7 @@ export default function PerfilPage() {
               </div>
               <div className={`p-4 rounded-xl ${theme.bg} border ${theme.border}`}>
                 <p className="text-xs text-muted">
-                  Tu score se calcula en base a impacto (50%), placement (25%), consistencia (15%) y exito en equipo (10%). Compite mas para mejorar tu clasificacion.
+                  Tu PSR usa un modelo bayesiano conservador: placement, kills normalizados, fuerza del lobby, incertidumbre sigma y parametros auditables de torneo.
                 </p>
               </div>
             </div>
@@ -416,6 +426,11 @@ export default function PerfilPage() {
               <p className="text-sm text-muted">Necesitas un minimo de 4 partidas competitivas para que tu clasificacion se estabilice.</p>
             </div>
           </div>
+        )}
+
+        {/* ═══ HISTORY TAB ═══ */}
+        {activeTab === "history" && (
+          <PlayerPsrHistoryView history={profile.psrHistory} />
         )}
 
         {/* ═══ EDIT TAB ═══ */}

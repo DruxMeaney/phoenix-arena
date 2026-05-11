@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+~$*
 
 # debug
 npm-debug.log*
@@ -43,3 +44,7 @@ next-env.d.ts
 
 /src/generated/prisma
 LogoPhoenix*.png
+
+# SQLite local dev database — never commit
+dev.db
+*.db-journal
