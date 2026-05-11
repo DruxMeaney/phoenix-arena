@@ -1,11 +1,11 @@
 import { PSR_MODEL_VERSION } from "@/lib/scoring";
-import { getPsrRankingSnapshot } from "@/lib/ranking/psr-service";
+import { getLatestPersistedPsrRankingSnapshot } from "@/lib/ranking/psr-service";
 import RankingClient from "./ranking-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function RankingPage() {
-  const snapshot = await getPsrRankingSnapshot();
+  const snapshot = await getLatestPersistedPsrRankingSnapshot();
 
   return (
     <RankingClient
