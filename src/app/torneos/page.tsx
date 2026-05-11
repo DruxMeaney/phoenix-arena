@@ -169,14 +169,14 @@ function BracketMatch({ a, b, winner, round }: { a: string; b: string; winner: s
   );
 }
 
-type PaymentPopupResult = { paymentId: string | null; sessionId: string | null; status: string | null };
+type PaymentPopupResult = { paymentId: string | null; status: string | null };
 
 /**
  * Open a checkout URL in a popup. For PayPal we just wait for the popup to
- * close (the order id is known beforehand). MercadoPago returns `paymentId`
- * via postMessage from /payment-return. Stripe returns `sessionId` likewise.
+ * close (the order id is known beforehand). For MercadoPago we additionally
+ * listen for a postMessage from /payment-return carrying `paymentId`.
  */
-function openPaymentPopup(url: string, expectedProvider: "paypal" | "mp" | "stripe"): Promise<PaymentPopupResult> {
+function openPaymentPopup(url: string, expectedProvider: "paypal" | "mp"): Promise<PaymentPopupResult> {
   return new Promise((resolve) => {
     const w = 480;
     const h = 720;
@@ -204,13 +204,12 @@ function openPaymentPopup(url: string, expectedProvider: "paypal" | "mp" | "stri
       if (data.provider !== expectedProvider) return;
       settle({
         paymentId: typeof data.paymentId === "string" ? data.paymentId : null,
-        sessionId: typeof data.sessionId === "string" ? data.sessionId : null,
         status: typeof data.status === "string" ? data.status : null,
       });
     };
 
     const interval = window.setInterval(() => {
-      if (popup.closed) settle({ paymentId: null, sessionId: null, status: null });
+      if (popup.closed) settle({ paymentId: null, status: null });
     }, 600);
 
     window.addEventListener("message", listener);
@@ -228,7 +227,7 @@ function TournamentCard({
   walletBalance: number | null;
   onChange: () => Promise<void>;
 }) {
-  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal" | "mercadopago" | "stripe">(null);
+  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal" | "mercadopago">(null);
   const [error, setError] = useState<string | null>(null);
 
   const pct = t.maxSlots > 0 ? Math.round((t.filledSlots / t.maxSlots) * 100) : 0;
@@ -348,43 +347,6 @@ function TournamentCard({
     }
   }, [t.id, t.entryFee, balance, onChange]);
 
-  const handleStripeJoin = useCallback(async () => {
-    setBusy("stripe");
-    setError(null);
-    try {
-      const topUp = Math.max(t.entryFee - balance, 1);
-      const sessionRes = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Number(topUp.toFixed(2)),
-          purpose: "tournament_join",
-          tournamentId: t.id,
-        }),
-      });
-      const sessionData = await sessionRes.json().catch(() => ({}));
-      if (!sessionRes.ok) throw new Error(sessionData.error || "Error al crear sesion de Stripe");
-      const { url } = sessionData as { url: string };
-      if (!url) throw new Error("Stripe no devolvio URL de pago");
-
-      const result = await openPaymentPopup(url, "stripe");
-      if (!result.sessionId) throw new Error("Pago cancelado o no completado");
-
-      const joinRes = await fetch(`/api/tournaments/${t.id}/stripe-join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: result.sessionId }),
-      });
-      const joinData = await joinRes.json().catch(() => ({}));
-      if (!joinRes.ok) throw new Error(joinData.error || "El pago no se completo");
-      await onChange();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }, [t.id, t.entryFee, balance, onChange]);
-
   return (
     <div className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col gap-4">
       {/* Top row */}
@@ -491,13 +453,6 @@ function TournamentCard({
             className="w-full py-2.5 rounded-lg text-sm font-semibold border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 transition-colors"
           >
             {busy === "mercadopago" ? "Procesando..." : `Pagar con MercadoPago ($${t.entryFee.toFixed(2)})`}
-          </button>
-          <button
-            onClick={handleStripeJoin}
-            disabled={busy !== null}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold border border-purple-500/40 text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 transition-colors"
-          >
-            {busy === "stripe" ? "Procesando..." : `Pagar con Stripe ($${t.entryFee.toFixed(2)})`}
           </button>
         </div>
       ) : (
