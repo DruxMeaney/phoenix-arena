@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
     "legacy:extract": "python3 scripts/extract_legacy_psr.py --source ../00_old --output data/legacy-psr/legacy-import.json",
