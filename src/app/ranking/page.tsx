@@ -9,7 +9,7 @@ export default async function RankingPage() {
 
   return (
     <RankingClient
-      initialPlayers={snapshot.rankings}
+      initialPlayers={snapshot.rankings.slice(0, 250)}
       initialStats={snapshot.stats}
       loadError={snapshot.loadError}
       scoringPhase={PSR_MODEL_VERSION}

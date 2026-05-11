@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 /* ── SVG Icons ───────────────────────────────────────────────── */
 const IconSearch = () => (
@@ -174,15 +174,38 @@ export default function RankingClient({
   loadError,
   scoringPhase,
 }: RankingClientProps) {
+  const [rankingPlayers, setRankingPlayers] = useState(initialPlayers);
+  const [isLoadingFullRanking, setIsLoadingFullRanking] = useState(initialStats.totalPlayers > initialPlayers.length);
   const [filterTorneo, setFilterTorneo] = useState("todos");
   const [filterElegibilidad, setFilterElegibilidad] = useState("todos");
   const [filterTier, setFilterTier] = useState("todos");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
+  useEffect(() => {
+    if (initialStats.totalPlayers <= initialPlayers.length) return;
+    let cancelled = false;
+
+    fetch("/api/ranking")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { rankings?: Player[] } | null) => {
+        if (!cancelled && payload?.rankings?.length) {
+          setRankingPlayers(payload.rankings);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoadingFullRanking(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPlayers.length, initialStats.totalPlayers]);
+
   const totalRecords = useMemo(
-    () => initialPlayers.reduce((sum, player) => sum + player.participaciones, 0),
-    [initialPlayers]
+    () => rankingPlayers.reduce((sum, player) => sum + player.participaciones, 0),
+    [rankingPlayers]
   );
 
   const dashboardStats = [
@@ -195,13 +218,13 @@ export default function RankingClient({
   ];
 
   const filteredPlayers = useMemo(() => {
-    return initialPlayers.filter((p) => {
+    return rankingPlayers.filter((p) => {
       if (filterTier !== "todos" && p.tier !== filterTier) return false;
       if (filterElegibilidad === "elegible" && p.participaciones < 4) return false;
       if (searchQuery && !p.nombre.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [filterElegibilidad, filterTier, initialPlayers, searchQuery]);
+  }, [filterElegibilidad, filterTier, rankingPlayers, searchQuery]);
   const visiblePlayers = useMemo(
     () => filteredPlayers.slice(0, MAX_VISIBLE_PLAYERS),
     [filteredPlayers]
@@ -329,6 +352,11 @@ export default function RankingClient({
             <p className="text-sm text-muted mt-0.5">
               {filteredPlayers.length} jugadores encontrados. Mostrando {visiblePlayers.length}. Snapshot calculado desde registros rankeables.
             </p>
+            {isLoadingFullRanking && (
+              <p className="text-xs text-blue-300 mt-1">
+                Cargando base completa para busqueda y filtros...
+              </p>
+            )}
             {hiddenPlayers > 0 && (
               <p className="text-xs text-muted mt-1">
                 Usa busqueda o filtros para encontrar jugadores fuera de los primeros {MAX_VISIBLE_PLAYERS}.
