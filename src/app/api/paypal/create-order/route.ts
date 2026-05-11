@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { createPayPalOrder } from "@/lib/paypal";
+import { createPayPalOrder, encodePayPalCustomId } from "@/lib/paypal";
 
 /** POST /api/paypal/create-order — Create a PayPal order for deposit */
 export async function POST(request: NextRequest) {
@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const order = await createPayPalOrder(amount);
+    const order = await createPayPalOrder(amount, {
+      customId: encodePayPalCustomId(user.id, amount),
+    });
 
     // Find the approval URL
     const approvalUrl = order.links?.find(
