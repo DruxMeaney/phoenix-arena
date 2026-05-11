@@ -165,6 +165,8 @@ const tierBadge: Record<Tier, string> = {
   Detri: "badge-detri",
 };
 
+const neonPanelCycle = ["neon-panel-red", "neon-panel-cyan", "neon-panel-fuchsia"] as const;
+
 const MAX_VISIBLE_PLAYERS = 250;
 
 /* ── Component ────────────────────────────────────────────────── */
@@ -210,11 +212,11 @@ export default function RankingClient({
 
   const dashboardStats = [
     { label: "Jugadores Activos", value: initialStats.totalPlayers.toLocaleString("es-MX"), icon: <IconUsers />, color: "text-foreground" },
-    { label: "Elegibles", value: initialStats.eligible.toLocaleString("es-MX"), icon: <IconStar />, color: "text-blue-400" },
+    { label: "Elegibles", value: initialStats.eligible.toLocaleString("es-MX"), icon: <IconStar />, color: "text-cyan-300" },
     { label: "PRO", value: initialStats.pro.toLocaleString("es-MX"), icon: <IconAward />, color: "text-red-400" },
-    { label: "AM", value: initialStats.am.toLocaleString("es-MX"), icon: <IconBarChart />, color: "text-blue-500" },
-    { label: "Eventos", value: (initialStats.events ?? 0).toLocaleString("es-MX"), icon: <IconDatabase />, color: "text-foreground" },
-    { label: "Deltas", value: (initialStats.deltas ?? totalRecords).toLocaleString("es-MX"), icon: <IconTrendUp />, color: "text-muted" },
+    { label: "AM", value: initialStats.am.toLocaleString("es-MX"), icon: <IconBarChart />, color: "text-fuchsia-300" },
+    { label: "Eventos", value: (initialStats.events ?? 0).toLocaleString("es-MX"), icon: <IconDatabase />, color: "text-cyan-300" },
+    { label: "Deltas", value: (initialStats.deltas ?? totalRecords).toLocaleString("es-MX"), icon: <IconTrendUp />, color: "text-red-300" },
   ];
 
   const filteredPlayers = useMemo(() => {
@@ -233,13 +235,13 @@ export default function RankingClient({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+      <div className="neon-section neon-section-fuchsia max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
         {/* ── Header ──────────────────────────────────────────── */}
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-3">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gradient">Ranking Phoenix Arena</h1>
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/30">
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
               PSR {scoringPhase}
             </span>
           </div>
@@ -250,8 +252,8 @@ export default function RankingClient({
 
         {/* ── Methodology Positioning ────────────────────────── */}
         <div className="grid md:grid-cols-4 gap-3">
-          {methodologyPrinciples.map((principle) => (
-            <div key={principle.label} className="bg-surface border border-border rounded-xl p-4 card-hover">
+          {methodologyPrinciples.map((principle, i) => (
+            <div key={principle.label} className={`bg-surface border border-border rounded-xl p-4 card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{principle.label}</p>
               <p className="text-lg font-bold mt-2">{principle.value}</p>
               <p className="text-xs text-muted leading-relaxed mt-2">{principle.body}</p>
@@ -261,8 +263,8 @@ export default function RankingClient({
 
         {/* ── Dashboard Stats ─────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {dashboardStats.map((s) => (
-            <div key={s.label} className="bg-surface border border-border rounded-xl p-4 text-center card-hover">
+          {dashboardStats.map((s, i) => (
+            <div key={s.label} className={`bg-surface border border-border rounded-xl p-4 text-center card-hover ${neonPanelCycle[(i + 1) % neonPanelCycle.length]}`}>
               <div className={`${s.color} flex justify-center mb-2`}>{s.icon}</div>
               <p className="text-xl sm:text-2xl font-bold">{s.value}</p>
               <p className="text-xs text-muted mt-0.5">{s.label}</p>
@@ -270,13 +272,13 @@ export default function RankingClient({
           ))}
         </div>
 
-        <div className="rounded-xl border border-border bg-surface px-4 py-3 text-xs text-muted flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="neon-panel-cyan rounded-xl border border-border bg-surface px-4 py-3 text-xs text-muted flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <span>Modelo activo: <span className="font-mono text-foreground">{initialStats.modelVersion ?? scoringPhase}</span></span>
           <span>Config hash: <span className="font-mono text-foreground">{initialStats.configHash?.slice(0, 16) ?? "pendiente"}</span></span>
         </div>
 
         {/* ── Filters ─────────────────────────────────────────── */}
-        <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6">
+        <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-4 sm:p-6">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Tipo Torneo */}
             <div className="relative">
@@ -346,7 +348,7 @@ export default function RankingClient({
         </div>
 
         {/* ── Main Ranking Table ──────────────────────────────── */}
-        <div className="bg-surface border border-border rounded-2xl overflow-hidden glow">
+        <div className="neon-panel-cyan bg-surface border border-border rounded-2xl overflow-hidden glow">
           <div className="p-6 border-b border-border">
             <h2 className="text-lg font-bold">Tabla de Clasificacion</h2>
             <p className="text-sm text-muted mt-0.5">
@@ -442,7 +444,7 @@ export default function RankingClient({
                     <td className="px-4 py-3.5 text-center">
                       <span className={`font-semibold ${
                         p.percentil >= 80 ? "text-success" :
-                        p.percentil >= 40 ? "text-blue-400" :
+                        p.percentil >= 40 ? "text-cyan-300" :
                         "text-muted"
                       }`}>
                         {p.percentil.toFixed(1)}%
@@ -459,7 +461,7 @@ export default function RankingClient({
         {selectedPlayer && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedPlayer(null)}>
             <div
-              className="bg-surface border border-border rounded-2xl w-full max-w-lg p-6 sm:p-8 glow-strong animate-fade-up"
+              className="neon-panel-fuchsia bg-surface border border-border rounded-2xl w-full max-w-lg p-6 sm:p-8 glow-strong animate-fade-up"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -545,7 +547,7 @@ export default function RankingClient({
           </div>
 
           {/* ── Research Sources ──────────────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8">
+          <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6 sm:p-8">
             <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6 items-start">
               <div>
                 <h3 className="font-semibold mb-3">Base metodologica</h3>
@@ -560,7 +562,7 @@ export default function RankingClient({
                     href={source.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="block rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold hover:border-red-500/50 transition-colors"
+                    className="neon-panel-cyan block rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold hover:border-red-500/50 transition-colors"
                   >
                     {source.label}
                   </a>
@@ -570,23 +572,23 @@ export default function RankingClient({
           </div>
 
           {/* ── Formula ───────────────────────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 space-y-4">
+          <div className="neon-panel-red bg-surface border border-border rounded-2xl p-6 sm:p-8 space-y-4">
             <h3 className="font-semibold">Modelo publicable v1.0 propuesto</h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              {ratingModel.map((item) => (
-                <div key={item.label} className="bg-surface-2 border border-border-light rounded-xl p-5">
+              {ratingModel.map((item, i) => (
+                <div key={item.label} className={`bg-surface-2 border border-border-light rounded-xl p-5 ${neonPanelCycle[i % neonPanelCycle.length]}`}>
                   <p className="text-xs text-muted uppercase tracking-wider font-bold">{item.label}</p>
                   <p className="font-mono text-sm text-gradient font-bold mt-2">{item.formula}</p>
                   <p className="text-xs text-muted leading-relaxed mt-2">{item.note}</p>
                 </div>
               ))}
             </div>
-            <div className="bg-surface-2 border border-border-light rounded-xl p-5 font-mono text-sm">
+            <div className="neon-panel-cyan bg-surface-2 border border-border-light rounded-xl p-5 font-mono text-sm">
               <span className="text-muted">Delta rating</span>
               <span className="text-foreground"> = posterior(</span>
               <span className="text-red-400">resultado</span>
               <span className="text-muted">, </span>
-              <span className="text-blue-400">fuerza_lobby</span>
+              <span className="text-cyan-300">fuerza_lobby</span>
               <span className="text-muted">, </span>
               <span className="text-green-400">performance_individual_acotada</span>
               <span className="text-foreground">)</span>
@@ -595,7 +597,7 @@ export default function RankingClient({
 
           {/* ── 4 Component Cards ─────────────────────────────── */}
           <div className="grid sm:grid-cols-2 gap-4">
-            <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+            <div className="neon-panel-red bg-surface border border-border rounded-2xl p-6 card-hover">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-red-500/10 text-red-400"><IconTarget /></div>
                 <h4 className="font-semibold">Performance individual</h4>
@@ -604,16 +606,16 @@ export default function RankingClient({
                 Kills y contribucion individual se usan como evidencia secundaria, con retornos decrecientes y limites por lobby para que un stat padding extremo no domine el rating.
               </p>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+            <div className="neon-panel-cyan bg-surface border border-border rounded-2xl p-6 card-hover">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400"><IconPodium /></div>
+                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-300"><IconPodium /></div>
                 <h4 className="font-semibold">Resultado competitivo</h4>
               </div>
               <p className="text-sm text-muted leading-relaxed">
                 El placement y el orden final son la senal principal. Ganar contra rivales fuertes mueve mas que ganar contra rivales con baja estimacion de habilidad.
               </p>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+            <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6 card-hover">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-green-500/10 text-green-400"><IconRepeat /></div>
                 <h4 className="font-semibold">Incertidumbre explicita</h4>
@@ -622,7 +624,7 @@ export default function RankingClient({
                 Sigma mide que tanto sabemos del jugador. En calibracion, sigma es alta y el PSR publico baja; con evidencia repetida, la incertidumbre se reduce.
               </p>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+            <div className="neon-panel-violet bg-surface border border-border rounded-2xl p-6 card-hover">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400"><IconHandshake /></div>
                 <h4 className="font-semibold">Equipos y formatos</h4>
@@ -634,7 +636,7 @@ export default function RankingClient({
           </div>
 
           {/* ── LSF Table ─────────────────────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="neon-panel-cyan bg-surface border border-border rounded-2xl overflow-hidden">
             <div className="p-6 border-b border-border">
               <h3 className="font-semibold">Factor LSF (Lobby Skill Factor)</h3>
               <p className="text-sm text-muted mt-1">Parametro temporal para separar pools mientras el modelo bayesiano acumula evidencia suficiente.</p>
@@ -676,7 +678,7 @@ export default function RankingClient({
           </div>
 
           {/* ── Auditability ──────────────────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8">
+          <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6 sm:p-8">
             <div className="grid lg:grid-cols-[0.75fr_1.25fr] gap-6">
               <div>
                 <h3 className="font-semibold">Auditoria y gobernanza</h3>
@@ -686,7 +688,7 @@ export default function RankingClient({
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
                 {auditTrail.map((item) => (
-                  <div key={item} className="rounded-xl bg-surface-2 border border-border-light p-4">
+                  <div key={item} className="neon-panel-cyan rounded-xl bg-surface-2 border border-border-light p-4">
                     <p className="text-sm text-muted leading-relaxed">{item}</p>
                   </div>
                 ))}
@@ -696,7 +698,7 @@ export default function RankingClient({
 
           {/* ── Tier Classification ───────────────────────────── */}
           <div className="grid sm:grid-cols-3 gap-4">
-            <div className="bg-surface border border-red-500/30 rounded-2xl p-6 card-hover relative overflow-hidden">
+            <div className="neon-panel-red bg-surface border border-red-500/30 rounded-2xl p-6 card-hover relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-bl-full" />
               <span className="badge-pro px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-4">PRO</span>
               <p className="text-3xl font-bold mb-1">Percentil &ge; 80</p>
@@ -707,8 +709,8 @@ export default function RankingClient({
                 <p className="text-xs text-muted">Minimo 4 participaciones para calificar</p>
               </div>
             </div>
-            <div className="bg-surface border border-blue-500/30 rounded-2xl p-6 card-hover relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-bl-full" />
+            <div className="neon-panel-cyan bg-surface border border-blue-500/30 rounded-2xl p-6 card-hover relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-bl-full" />
               <span className="badge-am px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-4">AM</span>
               <p className="text-3xl font-bold mb-1">Percentil &ge; 40</p>
               <p className="text-sm text-muted leading-relaxed">
@@ -718,7 +720,7 @@ export default function RankingClient({
                 <p className="text-xs text-muted">Minimo 4 participaciones para calificar</p>
               </div>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-6 card-hover relative overflow-hidden">
+            <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6 card-hover relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.02] rounded-bl-full" />
               <span className="badge-detri px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-4">Detri</span>
               <p className="text-3xl font-bold mb-1">Percentil &lt; 40</p>
@@ -739,7 +741,7 @@ export default function RankingClient({
             </p>
             <div className="grid sm:grid-cols-3 gap-4">
               {/* Decay */}
-              <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+              <div className="neon-panel-red bg-surface border border-border rounded-2xl p-6 card-hover">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 rounded-lg bg-yellow-500/10">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -757,10 +759,10 @@ export default function RankingClient({
               </div>
 
               {/* Lobby Strength */}
-              <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+              <div className="neon-panel-cyan bg-surface border border-border rounded-2xl p-6 card-hover">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <div className="p-2 rounded-lg bg-cyan-500/10">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   </div>
                   <h4 className="font-semibold">Fortaleza del Lobby</h4>
                 </div>
@@ -768,14 +770,14 @@ export default function RankingClient({
                   Ganar contra jugadores con rating alto aporta mas evidencia que ganar contra un lobby debil. La dificultad se estima desde los ratings previos de los participantes.
                 </p>
                 <div className="bg-surface-2 rounded-lg p-3 font-mono text-xs space-y-1">
-                  <p><span className="text-muted">Formula:</span> <span className="text-blue-400">mean(scores lobby) / mean global</span></p>
+                  <p><span className="text-muted">Formula:</span> <span className="text-cyan-300">mean(scores lobby) / mean global</span></p>
                   <p><span className="text-muted">Rango:</span> <span className="text-foreground">x0.5 a x2.0</span></p>
                   <p><span className="text-muted">Aplica a:</span> <span className="text-foreground">Componente Placement</span></p>
                 </div>
               </div>
 
               {/* Cold Start */}
-              <div className="bg-surface border border-border rounded-2xl p-6 card-hover">
+              <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6 card-hover">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 rounded-lg bg-green-500/10">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
@@ -794,7 +796,7 @@ export default function RankingClient({
             </div>
 
             {/* Weighted Recency note */}
-            <div className="bg-surface border border-border rounded-2xl p-6">
+            <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6">
               <div className="flex items-start gap-4">
                 <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -809,7 +811,7 @@ export default function RankingClient({
             </div>
 
             {/* Novice exclusion note */}
-            <div className="bg-surface border border-yellow-500/20 rounded-2xl p-5 flex items-start gap-3">
+            <div className="neon-panel-red bg-surface border border-yellow-500/20 rounded-2xl p-5 flex items-start gap-3">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <p className="text-sm text-muted">
                 <span className="text-foreground font-medium">Los torneos Novice deben quedar fuera del ranking monetizado principal.</span> Pueden servir para calibracion inicial, deteccion de smurfs y aprendizaje sin impacto directo en premios.
@@ -824,11 +826,11 @@ export default function RankingClient({
               Sistema de confianza que previene suplantacion de identidad, cuentas prestadas y smurfing (pros jugando en categorias bajas).
             </p>
 
-            <div className="bg-surface border border-border rounded-2xl p-6">
+            <div className="neon-panel-cyan bg-surface border border-border rounded-2xl p-6">
               <h4 className="font-semibold mb-3">Variables del Trust Score</h4>
               <div className="grid sm:grid-cols-5 gap-3 mb-5">
                 {[
-                  { label: "Antiguedad", weight: "20%", color: "text-blue-400" },
+                  { label: "Antiguedad", weight: "20%", color: "text-cyan-300" },
                   { label: "Torneos", weight: "25%", color: "text-purple-400" },
                   { label: "Consistencia", weight: "25%", color: "text-green-400" },
                   { label: "Cuentas vinculadas", weight: "15%", color: "text-yellow-400" },
@@ -845,7 +847,7 @@ export default function RankingClient({
                 {[
                   { range: "< 30", label: "Solo puede jugar Amateur", color: "text-red-400", bg: "bg-red-500/10" },
                   { range: "30 — 60", label: "Amateur + Detri con monitoreo", color: "text-yellow-400", bg: "bg-yellow-500/10" },
-                  { range: "> 60", label: "Acceso completo a todos los torneos", color: "text-blue-400", bg: "bg-blue-500/10" },
+                  { range: "> 60", label: "Acceso completo a todos los torneos", color: "text-cyan-300", bg: "bg-cyan-500/10" },
                   { range: "> 80", label: "Badge 'Verificado' — jugador confiable", color: "text-success", bg: "bg-success/10" },
                 ].map((r) => (
                   <div key={r.range} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg ${r.bg}`}>
@@ -858,7 +860,7 @@ export default function RankingClient({
           </div>
 
           {/* ── Placement Points Table ─────────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl p-6">
+          <div className="neon-panel-red bg-surface border border-border rounded-2xl p-6">
             <h4 className="font-semibold mb-3">Tabla operativa actual por posicion</h4>
             <p className="text-xs text-muted mb-4">La fase actual usa esta tabla como scoring base. En PSR v1.0 se conserva como evidencia historica y se convierte en entrada del update bayesiano.</p>
             <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
@@ -876,7 +878,7 @@ export default function RankingClient({
           </div>
 
           {/* ── Fragger vs Anchor Balance ──────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl p-6">
+          <div className="neon-panel-fuchsia bg-surface border border-border rounded-2xl p-6">
             <h4 className="font-semibold mb-3">Balance de Roles: Fragger vs Anchor</h4>
             <p className="text-xs text-muted mb-4">El modelo debe reconocer estilos distintos sin permitir que una sola metrica explique toda la habilidad.</p>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -884,8 +886,8 @@ export default function RankingClient({
                 <h5 className="font-semibold text-red-400 text-sm mb-2">Fragger</h5>
                 <p className="text-xs text-muted leading-relaxed">Alto numero de kills, placement inconsistente. Si solo se ponderaran kills, este perfil dominaria injustamente.</p>
               </div>
-              <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
-                <h5 className="font-semibold text-blue-400 text-sm mb-2">Anchor</h5>
+              <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4">
+                <h5 className="font-semibold text-cyan-300 text-sm mb-2">Anchor</h5>
                 <p className="text-xs text-muted leading-relaxed">Pocas kills, placement muy consistente (top 3). Seria subvalorado si solo se ponderara el placement.</p>
               </div>
             </div>
@@ -893,7 +895,7 @@ export default function RankingClient({
           </div>
 
           {/* ── Scoring Phases ─────────────────────────────────── */}
-          <div className="bg-surface border border-border rounded-2xl p-6">
+          <div className="neon-panel-cyan bg-surface border border-border rounded-2xl p-6">
             <h4 className="font-semibold mb-3">Fases de Implementacion</h4>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
@@ -904,7 +906,7 @@ export default function RankingClient({
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 shrink-0 mt-0.5">Fase 2</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0 mt-0.5">Fase 2</span>
                 <div>
                   <p className="text-sm font-medium">PSR bayesiano en modo sombra</p>
                   <p className="text-xs text-muted">Calcular mu, sigma, delta por partida y compararlo contra el score actual sin afectar premios durante el periodo de validacion.</p>

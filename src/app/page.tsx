@@ -155,17 +155,17 @@ const features = [
     desc: "Elige tu modalidad, define el monto y las reglas. Encuentra oponentes al instante.",
   },
   {
-    icon: <IconWallet className="h-7 w-7 text-blue-400" />,
+    icon: <IconWallet className="h-7 w-7 text-cyan-300" />,
     title: "Monedero Seguro",
     desc: "Depositos rapidos, retiros confiables. Tu dinero protegido con trazabilidad completa.",
   },
   {
-    icon: <IconTrophy className="h-7 w-7 text-red-400" />,
+    icon: <IconTrophy className="h-7 w-7 text-fuchsia-300" />,
     title: "Ranking Competitivo",
     desc: "Sistema de puntuacion profesional. Tiers PRO, AM y Detri basados en desempeno real.",
   },
   {
-    icon: <IconBracket className="h-7 w-7 text-blue-400" />,
+    icon: <IconBracket className="h-7 w-7 text-cyan-300" />,
     title: "Torneos Organizados",
     desc: "Brackets, inscripciones y bolsas de premios automaticas.",
   },
@@ -175,7 +175,7 @@ const features = [
     desc: "Evidencia, confirmacion y resolucion de disputas justo y verificable.",
   },
   {
-    icon: <IconShieldLock className="h-7 w-7 text-blue-400" />,
+    icon: <IconShieldLock className="h-7 w-7 text-fuchsia-300" />,
     title: "Seguridad Integral",
     desc: "Verificacion de usuarios, deteccion de multi-cuentas y registro de actividad.",
   },
@@ -192,7 +192,7 @@ const trustCards = [
     ],
   },
   {
-    icon: <IconScale className="h-8 w-8 text-blue-400" />,
+    icon: <IconScale className="h-8 w-8 text-cyan-300" />,
     title: "Fair Play Garantizado",
     bullets: [
       "Evidencia obligatoria (capturas o clips) para cada resultado",
@@ -201,7 +201,7 @@ const trustCards = [
     ],
   },
   {
-    icon: <IconUserCheck className="h-8 w-8 text-red-400" />,
+    icon: <IconUserCheck className="h-8 w-8 text-fuchsia-300" />,
     title: "Identidad Verificada",
     bullets: [
       "Verificacion de identidad para retiros y actividad competitiva",
@@ -276,6 +276,8 @@ const faqs = [
   },
 ];
 
+const neonPanelCycle = ["neon-panel-red", "neon-panel-cyan", "neon-panel-fuchsia"] as const;
+
 /* ─── Helpers ─── */
 
 function tierBadge(tier: string) {
@@ -295,21 +297,22 @@ export default function Home() {
       {/* ════════ HERO — Minimal, Phoenix-centered ════════ */}
       <section className="relative overflow-hidden min-h-[100dvh] flex flex-col items-center justify-center">
         {/* Background glows */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/3 h-[600px] w-[600px] sm:h-[800px] sm:w-[800px] rounded-full bg-[#2d1b69]/20 blur-[150px]" />
-        <div className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 h-[400px] w-[90vw] bg-red-600/[.06] blur-[100px] rounded-full" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/3 h-[600px] w-[600px] rounded-full bg-fuchsia-500/15 blur-[150px] sm:h-[800px] sm:w-[800px]" />
+        <div className="pointer-events-none absolute right-0 top-24 h-[360px] w-[42vw] rounded-full bg-cyan-400/[.08] blur-[110px]" />
+        <div className="pointer-events-none absolute left-1/2 bottom-0 h-[400px] w-[90vw] -translate-x-1/2 rounded-full bg-red-600/[.08] blur-[100px]" />
 
         <div className="relative text-center px-4 sm:px-6 animate-fade-up">
           {/* Giant Logo */}
           <div className="mb-8 flex justify-center">
             <div className="relative">
               {/* Purple aura behind logo */}
-              <div className="absolute inset-0 scale-125 rounded-full bg-[#2d1b69]/40 blur-[60px]" />
-              <div className="absolute inset-0 scale-110 rounded-full bg-[#1a0f3d]/50 blur-[30px]" />
+              <div className="absolute inset-0 scale-125 rounded-full bg-fuchsia-500/22 blur-[64px]" />
+              <div className="absolute inset-0 scale-110 rounded-full bg-red-500/18 blur-[34px]" />
               <img
                 src="/logo-color.png"
                 alt="Phoenix Arena"
                 className="relative w-64 sm:w-80 md:w-96 lg:w-[28rem] drop-shadow-2xl"
-                style={{ filter: "drop-shadow(0 0 40px rgba(45,27,105,0.5))" }}
+                style={{ filter: "drop-shadow(0 0 42px rgba(217,70,239,0.42)) drop-shadow(0 0 22px rgba(255,45,85,0.26))" }}
               />
             </div>
           </div>
@@ -346,7 +349,7 @@ export default function Home() {
       </section>
 
       {/* ════════ FLOW ════════ */}
-      <section className="bg-surface backdrop-blur-md py-20 sm:py-28">
+      <section className="neon-section neon-section-fuchsia bg-surface py-20 backdrop-blur-md sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tu camino a la victoria</h2>
@@ -354,8 +357,8 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {steps.map((s) => (
-              <div key={s.n} className="bg-surface-2 border border-border rounded-xl p-6 card-hover">
+            {steps.map((s, i) => (
+              <div key={s.n} className={`bg-surface-2 border border-border rounded-xl p-6 card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
                 <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-main text-white text-sm font-bold mb-4">
                   {s.n}
                 </div>
@@ -368,7 +371,7 @@ export default function Home() {
       </section>
 
       {/* ════════ MODULES ════════ */}
-      <section className="py-20 sm:py-28">
+      <section className="neon-section neon-section-cyan py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Todo lo que necesitas para competir</h2>
@@ -376,8 +379,8 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((f) => (
-              <div key={f.title} className="bg-surface border border-border rounded-xl p-6 card-hover">
+            {features.map((f, i) => (
+              <div key={f.title} className={`bg-surface border border-border rounded-xl p-6 card-hover ${neonPanelCycle[(i + 1) % neonPanelCycle.length]}`}>
                 <div className="mb-4">{f.icon}</div>
                 <h3 className="font-semibold text-foreground mb-2">{f.title}</h3>
                 <p className="text-muted text-sm leading-relaxed">{f.desc}</p>
@@ -388,7 +391,7 @@ export default function Home() {
       </section>
 
       {/* ════════ TRUST ════════ */}
-      <section className="bg-surface backdrop-blur-md py-20 sm:py-28">
+      <section className="neon-section neon-section-red bg-surface py-20 backdrop-blur-md sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tu competencia, protegida</h2>
@@ -396,14 +399,14 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {trustCards.map((card) => (
-              <div key={card.title} className="bg-surface-2 border border-border rounded-xl p-6 card-hover">
+            {trustCards.map((card, i) => (
+              <div key={card.title} className={`bg-surface-2 border border-border rounded-xl p-6 card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
                 <div className="mb-4">{card.icon}</div>
                 <h3 className="font-semibold text-foreground text-lg mb-4">{card.title}</h3>
                 <ul className="space-y-3">
                   {card.bullets.map((b, i) => (
                     <li key={i} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 text-success shrink-0">
+                      <span className="mt-0.5 text-cyan-300 shrink-0">
                         <IconCheck className="h-4 w-4" />
                       </span>
                       <span className="text-muted text-sm leading-relaxed">{b}</span>
@@ -417,15 +420,15 @@ export default function Home() {
       </section>
 
       {/* ════════ TIERS PREVIEW ════════ */}
-      <section className="py-16 sm:py-20">
+      <section className="neon-section neon-section-fuchsia py-16 sm:py-20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Sistema de Clasificacion</h2>
             <p className="mt-2 text-muted text-sm">Sube de tier compitiendo. Tu nivel habla por ti.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {tiers.map((t) => (
-              <div key={t.name} className="bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 text-center card-hover">
+            {tiers.map((t, i) => (
+              <div key={t.name} className={`bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 text-center card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
                 <div className="mb-2">{tierBadge(t.name)}</div>
                 <div className="text-xs text-muted mb-2">{t.range}</div>
                 <p className="text-muted text-xs leading-relaxed">{t.desc}</p>
@@ -441,7 +444,7 @@ export default function Home() {
       </section>
 
       {/* ════════ TOURNAMENTS PREVIEW ════════ */}
-      <section className="bg-surface backdrop-blur-md py-20 sm:py-28">
+      <section className="neon-section neon-section-cyan bg-surface py-20 backdrop-blur-md sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Torneos Activos</h2>
@@ -449,8 +452,8 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tournaments.map((t) => (
-              <div key={t.name} className="bg-surface-2 border border-border rounded-xl p-6 card-hover flex flex-col">
+            {tournaments.map((t, i) => (
+              <div key={t.name} className={`bg-surface-2 border border-border rounded-xl p-6 card-hover flex flex-col ${neonPanelCycle[(i + 2) % neonPanelCycle.length]}`}>
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs font-semibold ${t.statusColor}`}>{t.status}</span>
                   <IconCalendar className="h-4 w-4 text-muted" />
@@ -461,7 +464,7 @@ export default function Home() {
                 <div className="mt-auto space-y-2.5 pt-4 border-t border-border">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted">Premio</span>
-                    <span className="text-blue-400 font-semibold">{t.prize}</span>
+                    <span className="neon-cyan-text font-semibold">{t.prize}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted">Entrada</span>
@@ -489,7 +492,7 @@ export default function Home() {
       </section>
 
       {/* ════════ FAQ ════════ */}
-      <section className="py-20 sm:py-28">
+      <section className="neon-section neon-section-fuchsia py-20 sm:py-28">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Preguntas Frecuentes</h2>
@@ -498,7 +501,7 @@ export default function Home() {
 
           <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <details key={i} className="group bg-surface border border-border rounded-xl overflow-hidden">
+              <details key={i} className={`group bg-surface border border-border rounded-xl overflow-hidden ${neonPanelCycle[i % neonPanelCycle.length]}`}>
                 <summary className="flex items-center justify-between cursor-pointer px-6 py-4 text-foreground font-medium text-sm hover:bg-surface-2 transition-colors">
                   {faq.q}
                   <span className="ml-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180">
