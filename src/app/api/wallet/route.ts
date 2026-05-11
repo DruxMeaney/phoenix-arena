@@ -16,9 +16,12 @@ export async function GET() {
 
   if (!wallet) return NextResponse.json({ error: "Wallet no encontrada" }, { status: 404 });
 
+  const withdrawalCommissionRate = parseFloat(process.env.WITHDRAWAL_COMMISSION || "0.05");
+
   return NextResponse.json({
     balance: wallet.balance,
     heldBalance: wallet.heldBalance,
+    withdrawalCommissionRate,
     transactions: wallet.transactions.map((t) => ({
       id: t.id,
       type: t.type,
@@ -70,22 +73,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
     }
 
-    const updated = await prisma.wallet.update({
-      where: { id: wallet.id },
-      data: { balance: { decrement: amount } },
+    // Withdrawals carry a platform commission (configurable; defaults to 5%).
+    // The wallet is decremented by the full requested amount; the history
+    // records the net withdrawal and the commission as separate transactions
+    // so the wallet decrement always equals the sum of the two.
+    const commissionRate = parseFloat(process.env.WITHDRAWAL_COMMISSION || "0.05");
+    const commission = Math.round(amount * commissionRate * 100) / 100;
+    const net = Math.round((amount - commission) * 100) / 100;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: amount } },
+      });
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "withdrawal",
+          amount: -net,
+          description: `Retiro neto de $${net.toFixed(2)} (solicitud $${amount.toFixed(2)})`,
+          status: "processing",
+        },
+      });
+      if (commission > 0) {
+        await tx.transaction.create({
+          data: {
+            walletId: wallet.id,
+            type: "commission",
+            amount: -commission,
+            description: `Comision de retiro (${(commissionRate * 100).toFixed(1)}%)`,
+            status: "completed",
+          },
+        });
+      }
     });
 
-    await prisma.transaction.create({
-      data: {
-        walletId: wallet.id,
-        type: "withdrawal",
-        amount: -amount,
-        description: `Retiro de $${amount.toFixed(2)}`,
-        status: "processing",
-      },
+    const updated = await prisma.wallet.findUnique({ where: { id: wallet.id } });
+    return NextResponse.json({
+      balance: updated?.balance ?? 0,
+      message: "Retiro en proceso",
+      requested: amount,
+      commission,
+      net,
     });
-
-    return NextResponse.json({ balance: updated.balance, message: "Retiro en proceso" });
   }
 
   return NextResponse.json({ error: "Accion invalida" }, { status: 400 });

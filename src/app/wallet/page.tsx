@@ -64,7 +64,7 @@ const statusConfig: Record<TxStatus, { color: string; icon: React.ReactNode }> =
 };
 
 /* ── Component ────────────────────────────────────────────────── */
-type PaymentMethod = "paypal" | "mercadopago";
+type PaymentMethod = "paypal" | "mercadopago" | "stripe";
 
 /**
  * Open a payment URL in a popup and resolve when either:
@@ -72,8 +72,8 @@ type PaymentMethod = "paypal" | "mercadopago";
  * - the popup closes (cancellation).
  * Falls back to a full redirect if the popup is blocked.
  */
-function openPaymentPopup(url: string, expectedProvider: "mp" | "paypal"):
-  Promise<{ paymentId: string | null; status: string | null }> {
+function openPaymentPopup(url: string, expectedProvider: "mp" | "paypal" | "stripe"):
+  Promise<{ paymentId: string | null; sessionId: string | null; status: string | null }> {
   return new Promise((resolve) => {
     const w = 480;
     const h = 720;
@@ -86,7 +86,7 @@ function openPaymentPopup(url: string, expectedProvider: "mp" | "paypal"):
     }
 
     let settled = false;
-    const settle = (val: { paymentId: string | null; status: string | null }) => {
+    const settle = (val: { paymentId: string | null; sessionId: string | null; status: string | null }) => {
       if (settled) return;
       settled = true;
       window.removeEventListener("message", listener);
@@ -101,12 +101,13 @@ function openPaymentPopup(url: string, expectedProvider: "mp" | "paypal"):
       if (data.provider !== expectedProvider) return;
       settle({
         paymentId: typeof data.paymentId === "string" ? data.paymentId : null,
+        sessionId: typeof data.sessionId === "string" ? data.sessionId : null,
         status: typeof data.status === "string" ? data.status : null,
       });
     };
 
     const interval = window.setInterval(() => {
-      if (popup.closed) settle({ paymentId: null, status: null });
+      if (popup.closed) settle({ paymentId: null, sessionId: null, status: null });
     }, 600);
 
     window.addEventListener("message", listener);
@@ -121,6 +122,7 @@ export default function WalletPage() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [balance, setBalance] = useState(0);
   const [heldBalance, setHeldBalance] = useState(0);
+  const [withdrawalCommissionRate, setWithdrawalCommissionRate] = useState(0.05);
   const [txList, setTxList] = useState<{ id: string; type: string; amount: number; description: string; status: string; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [depositLoading, setDepositLoading] = useState(false);
@@ -134,6 +136,9 @@ export default function WalletPage() {
         const data = await res.json();
         setBalance(data.balance);
         setHeldBalance(data.heldBalance);
+        if (typeof data.withdrawalCommissionRate === "number") {
+          setWithdrawalCommissionRate(data.withdrawalCommissionRate);
+        }
         setTxList(data.transactions || []);
       }
     } catch { /* ignore */ }
@@ -168,37 +173,63 @@ export default function WalletPage() {
         throw new Error("PayPal no devolvio URL de aprobacion");
       }
 
-      // MercadoPago: create preference, open popup, wait for return, capture.
-      const prefRes = await fetch("/api/mercadopago/create-preference", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, purpose: "wallet_topup" }),
-      });
-      if (!prefRes.ok) {
-        const err = await prefRes.json().catch(() => ({}));
-        throw new Error(err.error || "Error al crear orden de MercadoPago");
-      }
-      const { initPoint } = (await prefRes.json()) as { initPoint: string };
-      if (!initPoint) throw new Error("MercadoPago no devolvio URL de pago");
+      if (paymentMethod === "mercadopago") {
+        // MercadoPago: create preference, open popup, wait for return, capture.
+        const prefRes = await fetch("/api/mercadopago/create-preference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: amt, purpose: "wallet_topup" }),
+        });
+        if (!prefRes.ok) {
+          const err = await prefRes.json().catch(() => ({}));
+          throw new Error(err.error || "Error al crear orden de MercadoPago");
+        }
+        const { initPoint } = (await prefRes.json()) as { initPoint: string };
+        if (!initPoint) throw new Error("MercadoPago no devolvio URL de pago");
 
-      const result = await openPaymentPopup(initPoint, "mp");
-      if (!result.paymentId) {
-        throw new Error("Pago cancelado o no completado");
-      }
+        const result = await openPaymentPopup(initPoint, "mp");
+        if (!result.paymentId) throw new Error("Pago cancelado o no completado");
 
-      const captureRes = await fetch("/api/mercadopago/capture-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId: result.paymentId }),
-      });
-      const captureData = await captureRes.json().catch(() => ({}));
-      if (!captureRes.ok) {
-        throw new Error(captureData.error || "Error al confirmar el pago");
+        const captureRes = await fetch("/api/mercadopago/capture-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId: result.paymentId }),
+        });
+        const captureData = await captureRes.json().catch(() => ({}));
+        if (!captureRes.ok) throw new Error(captureData.error || "Error al confirmar el pago");
+        setMessage({ type: "success", text: `Deposito de $${(captureData.amountUsd ?? amt).toFixed(2)} exitoso` });
+        setSelectedAmount(null);
+        setCustomAmount("");
+        fetchWallet();
+      } else if (paymentMethod === "stripe") {
+        // Stripe: create checkout session, open popup, wait for return, capture.
+        const sessionRes = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: amt, purpose: "wallet_topup" }),
+        });
+        if (!sessionRes.ok) {
+          const err = await sessionRes.json().catch(() => ({}));
+          throw new Error(err.error || "Error al crear sesion de Stripe");
+        }
+        const { url } = (await sessionRes.json()) as { url: string };
+        if (!url) throw new Error("Stripe no devolvio URL de pago");
+
+        const result = await openPaymentPopup(url, "stripe");
+        if (!result.sessionId) throw new Error("Pago cancelado o no completado");
+
+        const captureRes = await fetch("/api/stripe/capture-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: result.sessionId }),
+        });
+        const captureData = await captureRes.json().catch(() => ({}));
+        if (!captureRes.ok) throw new Error(captureData.error || "Error al confirmar el pago");
+        setMessage({ type: "success", text: `Deposito de $${(captureData.amountUsd ?? amt).toFixed(2)} exitoso` });
+        setSelectedAmount(null);
+        setCustomAmount("");
+        fetchWallet();
       }
-      setMessage({ type: "success", text: `Deposito de $${(captureData.amountUsd ?? amt).toFixed(2)} exitoso` });
-      setSelectedAmount(null);
-      setCustomAmount("");
-      fetchWallet();
     } catch (err) {
       setMessage({ type: "error", text: (err as Error).message || "Error de conexion" });
     }
@@ -322,7 +353,7 @@ export default function WalletPage() {
             {/* Payment methods */}
             <div>
               <p className="text-sm text-muted mb-3">Metodo de pago</p>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("paypal")}
@@ -363,6 +394,26 @@ export default function WalletPage() {
                     <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success">Activo</span>
                   )}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("stripe")}
+                  className={`flex items-center gap-3 p-4 rounded-xl text-left transition-colors ${
+                    paymentMethod === "stripe"
+                      ? "bg-purple-500/10 border border-purple-500/40"
+                      : "bg-surface-2 border border-border hover:border-purple-500/40"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#635bff"><path d="M13.479 9.883c-1.626-.604-2.512-1.067-2.512-1.803 0-.622.511-.977 1.42-.977 1.668 0 3.381.642 4.575 1.21l.671-4.135c-.944-.448-2.85-1.178-5.491-1.178-1.872 0-3.434.488-4.553 1.397-1.171.954-1.769 2.327-1.769 3.997 0 3.022 1.847 4.318 4.847 5.408 1.943.704 2.586 1.207 2.586 1.978 0 .749-.638 1.181-1.778 1.181-1.422 0-3.795-.696-5.348-1.594l-.679 4.181c1.327.749 3.787 1.494 6.346 1.494 1.978 0 3.624-.467 4.748-1.353 1.249-.985 1.892-2.444 1.892-4.235 0-3.087-1.881-4.359-4.949-5.479z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Stripe</p>
+                    <p className="text-xs text-muted">Tarjeta global (USD)</p>
+                  </div>
+                  {paymentMethod === "stripe" && (
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success">Activo</span>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -389,7 +440,9 @@ export default function WalletPage() {
             >
               {depositLoading
                 ? "Procesando..."
-                : `Depositar con ${paymentMethod === "paypal" ? "PayPal" : "MercadoPago"}`}
+                : `Depositar con ${
+                    paymentMethod === "paypal" ? "PayPal" : paymentMethod === "mercadopago" ? "MercadoPago" : "Stripe"
+                  }`}
             </button>
           </div>
         ) : (
@@ -410,6 +463,20 @@ export default function WalletPage() {
               </div>
               <p className="text-xs text-muted mt-2">Disponible: ${balance.toFixed(2)}</p>
             </div>
+
+            {/* Commission preview */}
+            {withdrawAmount && parseFloat(withdrawAmount) > 0 && (() => {
+              const requested = parseFloat(withdrawAmount);
+              const commission = Math.round(requested * withdrawalCommissionRate * 100) / 100;
+              const net = Math.round((requested - commission) * 100) / 100;
+              return (
+                <div className="bg-surface-2 border border-border rounded-xl p-4 text-sm space-y-1">
+                  <div className="flex justify-between text-muted"><span>Solicitado</span><span className="font-mono">${requested.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-muted"><span>Comision ({(withdrawalCommissionRate * 100).toFixed(1)}%)</span><span className="font-mono text-red-400">-${commission.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-foreground font-semibold border-t border-border pt-1 mt-1"><span>Recibiras</span><span className="font-mono text-success">${net.toFixed(2)}</span></div>
+                </div>
+              );
+            })()}
 
             {/* Info notices */}
             <div className="space-y-3">

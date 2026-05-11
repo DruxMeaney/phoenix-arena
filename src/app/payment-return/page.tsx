@@ -17,8 +17,16 @@ import { useSearchParams } from "next/navigation";
 function PaymentReturnInner() {
   const params = useSearchParams();
   const provider = params.get("provider") || "mp";
+  // MercadoPago carries the result as payment_id/collection_id + status.
+  // Stripe carries it as session_id (no separate status — payment_status is
+  // checked server-side via getCheckoutSession). The cancel_url variant for
+  // Stripe sets `cancelled=1` so we can surface a different message.
   const paymentId = params.get("payment_id") || params.get("collection_id");
-  const status = params.get("status") || params.get("collection_status");
+  const sessionId = params.get("session_id");
+  const cancelled = params.get("cancelled") === "1";
+  const status = cancelled
+    ? "cancelled"
+    : params.get("status") || params.get("collection_status") || (sessionId ? "complete" : null);
   const externalReference = params.get("external_reference");
 
   useEffect(() => {
@@ -31,6 +39,7 @@ function PaymentReturnInner() {
           source: "phoenix-payment-return",
           provider,
           paymentId,
+          sessionId,
           status,
           externalReference,
         },
@@ -48,15 +57,20 @@ function PaymentReturnInner() {
       }
     }, 250);
     return () => window.clearTimeout(t);
-  }, [provider, paymentId, status, externalReference]);
+  }, [provider, paymentId, sessionId, status, externalReference]);
 
+  const isSuccess = status === "approved" || status === "complete";
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="bg-surface border border-border rounded-2xl p-8 max-w-md text-center space-y-3">
-        <h1 className="text-lg font-bold text-foreground">Pago procesado</h1>
+        <h1 className="text-lg font-bold text-foreground">
+          {cancelled ? "Pago cancelado" : "Pago procesado"}
+        </h1>
         <p className="text-sm text-muted">
-          {status === "approved"
+          {isSuccess
             ? "Pago aprobado. Volviendo a Phoenix Arena..."
+            : cancelled
+            ? "Cerrando ventana..."
             : `Estado: ${status || "desconocido"}. Volviendo a Phoenix Arena...`}
         </p>
         <button
