@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PSR_MODEL_VERSION } from "../src/lib/scoring/psr";
 import { rebuildAndPersistPsrRankings } from "../src/lib/ranking/psr-service";
@@ -184,68 +184,92 @@ async function resetLegacyRecords(playerIds: string[]) {
 }
 
 async function upsertLegacyUsers(players: LegacyPlayer[], handles: Set<string>) {
-  const existingUsers = await prisma.user.findMany({ select: { username: true } });
+  const selectedPlayers = players.filter((player) => handles.has(player.normalizedHandle));
+  const existingUsers = await prisma.user.findMany({
+    select: { id: true, username: true, email: true },
+  });
   const used = new Set(existingUsers.map((user) => user.username.toLowerCase()));
+  const existingByEmail = new Map(
+    existingUsers
+      .filter((user): user is typeof user & { email: string } => Boolean(user.email))
+      .map((user) => [user.email, user])
+  );
+  const createRows: Prisma.UserCreateManyInput[] = [];
   const byHandle = new Map<string, { id: string; username: string }>();
 
-  for (const player of players) {
-    if (!handles.has(player.normalizedHandle)) continue;
+  for (const player of selectedPlayers) {
     const email = legacyEmail(player.normalizedHandle);
     const previousEmail = legacyEmailV1(player.normalizedHandle);
-    const existingByEmail = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, username: true, email: true },
-    });
-    const shouldCheckPreviousEmail = !existingByEmail && previousEmail !== email;
-    const existingByPreviousEmail = shouldCheckPreviousEmail
-      ? await prisma.user.findUnique({
-          where: { email: previousEmail },
-          select: { id: true, username: true, email: true },
-        })
+    const existing = existingByEmail.get(email);
+    const previousExisting = !existing && previousEmail !== email
+      ? existingByEmail.get(previousEmail)
       : null;
-    if (existingByPreviousEmail) {
+
+    if (previousExisting) {
       await prisma.user.update({
-        where: { id: existingByPreviousEmail.id },
+        where: { id: previousExisting.id },
         data: { email },
       });
+      existingByEmail.delete(previousEmail);
+      existingByEmail.set(email, { ...previousExisting, email });
+      continue;
     }
 
-    const existing = existingByEmail ?? existingByPreviousEmail;
-    const username = existing?.username ?? uniqueUsername(player.displayHandle, used);
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {
-        status: "active",
-        role: "player",
-        profileTheme: player.participations >= 8 ? "neon-red" : "neon-blue",
-        region: "legacy-import",
-        favoriteGame: "Warzone",
-        bio: `Jugador importado desde historico Phoenix (${player.participations} participaciones detectadas).`,
-        passwordHash: LEGACY_PASSWORD_HASH,
-      },
-      create: {
-        username,
-        email,
-        passwordHash: LEGACY_PASSWORD_HASH,
-        status: "active",
-        role: "player",
-        profileTheme: player.participations >= 8 ? "neon-red" : "neon-blue",
-        region: "legacy-import",
-        favoriteGame: "Warzone",
-        platform: "uno",
-        bio: `Jugador importado desde historico Phoenix (${player.participations} participaciones detectadas).`,
-        motto: "Importado del historico competitivo",
-        xp: Math.min(5000, Math.round(player.kills * 12 + player.participations * 40)),
-        seasonXp: Math.min(1500, Math.round(player.kills * 3 + player.participations * 15)),
-      },
-    });
+    if (existing) continue;
 
-    await prisma.wallet.upsert({
-      where: { userId: user.id },
-      update: {},
-      create: { userId: user.id, balance: 0, heldBalance: 0 },
+    createRows.push({
+      username: uniqueUsername(player.displayHandle, used),
+      email,
+      passwordHash: LEGACY_PASSWORD_HASH,
+      status: "active",
+      role: "player",
+      profileTheme: player.participations >= 8 ? "neon-red" : "neon-blue",
+      region: "legacy-import",
+      favoriteGame: "Warzone",
+      platform: "uno",
+      bio: `Jugador importado desde historico Phoenix (${player.participations} participaciones detectadas).`,
+      motto: "Importado del historico competitivo",
+      xp: Math.min(5000, Math.round(player.kills * 12 + player.participations * 40)),
+      seasonXp: Math.min(1500, Math.round(player.kills * 3 + player.participations * 15)),
     });
-    byHandle.set(player.normalizedHandle, { id: user.id, username: user.username });
+  }
+
+  for (const rowChunk of chunkList(createRows)) {
+    await prisma.user.createMany({ data: rowChunk });
+  }
+
+  const finalUsersByEmail = new Map<string, { id: string; username: string }>();
+  const importEmails = selectedPlayers.map((player) => legacyEmail(player.normalizedHandle));
+  for (const emailChunk of chunkList([...new Set(importEmails)])) {
+    const users = await prisma.user.findMany({
+      where: { email: { in: emailChunk } },
+      select: { id: true, username: true, email: true },
+    });
+    for (const user of users) {
+      if (user.email) finalUsersByEmail.set(user.email, user);
+    }
+  }
+
+  for (const player of selectedPlayers) {
+    const user = finalUsersByEmail.get(legacyEmail(player.normalizedHandle));
+    if (user) byHandle.set(player.normalizedHandle, { id: user.id, username: user.username });
+  }
+
+  const userIds = [...byHandle.values()].map((user) => user.id);
+  const existingWalletUserIds = new Set<string>();
+  for (const userIdChunk of chunkList(userIds)) {
+    const wallets = await prisma.wallet.findMany({
+      where: { userId: { in: userIdChunk } },
+      select: { userId: true },
+    });
+    for (const wallet of wallets) existingWalletUserIds.add(wallet.userId);
+  }
+
+  const walletRows: Prisma.WalletCreateManyInput[] = userIds
+    .filter((userId) => !existingWalletUserIds.has(userId))
+    .map((userId) => ({ userId, balance: 0, heldBalance: 0 }));
+  for (const walletChunk of chunkList(walletRows)) {
+    await prisma.wallet.createMany({ data: walletChunk });
   }
   return byHandle;
 }
@@ -255,7 +279,7 @@ function playerKills(player: LegacyTeamPlayer): number {
 }
 
 async function createLegacyRecords(events: LegacyEvent[], usersByHandle: Map<string, { id: string }>) {
-  let records = 0;
+  const rows: Prisma.RankingMatchRecordCreateManyInput[] = [];
 
   for (const event of events) {
     const entries = event.teams.flatMap((team) =>
@@ -276,55 +300,56 @@ async function createLegacyRecords(events: LegacyEvent[], usersByHandle: Map<str
         playerKills: entry.player.killsByMap[round.map - 1] ?? 0,
       }));
 
-      await prisma.rankingMatchRecord.create({
-        data: {
-          playerId: user.id,
-          eventId: event.sourceId,
-          seasonId: "legacy-2025",
-          sourceType: LEGACY_SOURCE_TYPE,
-          sourceId: event.sourceId,
-          evidenceUrl: null,
-          verified: false,
-          modelVersion: PSR_MODEL_VERSION,
-          tournamentType: event.tournamentType,
-          date: new Date(event.occurredAt),
-          kills: Math.round(entry.kills),
-          deaths: 0,
-          position: Math.max(1, Math.round(entry.team.placement || event.totalTeams)),
-          totalTeams: Math.max(1, event.totalTeams),
-          teamName: entry.team.teamName,
-          teamNumber: entry.team.teamNumber,
-          teamGroup: entry.team.teamGroup || null,
-          roundsPlayed: entry.team.roundsPlayed,
-          averagePlacement: entry.team.averagePlacement || entry.team.placement,
-          averageKills,
-          teamKills: Math.round(entry.team.teamKills),
-          teamPoints: entry.team.skillPoints,
-          skillPoints: entry.team.skillPoints,
-          rawPoints: entry.team.rawPoints || entry.team.skillPoints,
-          matchpointWin: entry.team.matchpointWin,
-          matchpointBonus: Math.max(0, (entry.team.rawPoints || 0) - entry.team.skillPoints),
-          captureSchemaVersion: "psr-legacy-v1",
-          roundResults: JSON.stringify(roundResults),
-          complianceFlags: JSON.stringify({
-            paymentVerified: entry.team.paymentVerified,
-            discordVerified: entry.team.discordVerified,
-            photoVerified: entry.team.photoVerified,
-            flyerVerified: entry.team.flyerVerified,
-            rulesAccepted: false,
-            adminVerified: false,
-            importReviewRequired: true,
-            sourceFile: event.fileName,
-          }),
-          bestKillsInTournament: bestKills,
-          bestTeamPointsInTournament: bestSkillPoints,
-        },
+      rows.push({
+        playerId: user.id,
+        eventId: event.sourceId,
+        seasonId: "legacy-2025",
+        sourceType: LEGACY_SOURCE_TYPE,
+        sourceId: event.sourceId,
+        evidenceUrl: null,
+        verified: false,
+        modelVersion: PSR_MODEL_VERSION,
+        tournamentType: event.tournamentType,
+        date: new Date(event.occurredAt),
+        kills: Math.round(entry.kills),
+        deaths: 0,
+        position: Math.max(1, Math.round(entry.team.placement || event.totalTeams)),
+        totalTeams: Math.max(1, event.totalTeams),
+        teamName: entry.team.teamName,
+        teamNumber: entry.team.teamNumber,
+        teamGroup: entry.team.teamGroup || null,
+        roundsPlayed: entry.team.roundsPlayed,
+        averagePlacement: entry.team.averagePlacement || entry.team.placement,
+        averageKills,
+        teamKills: Math.round(entry.team.teamKills),
+        teamPoints: entry.team.skillPoints,
+        skillPoints: entry.team.skillPoints,
+        rawPoints: entry.team.rawPoints || entry.team.skillPoints,
+        matchpointWin: entry.team.matchpointWin,
+        matchpointBonus: Math.max(0, (entry.team.rawPoints || 0) - entry.team.skillPoints),
+        captureSchemaVersion: "psr-legacy-v1",
+        roundResults: JSON.stringify(roundResults),
+        complianceFlags: JSON.stringify({
+          paymentVerified: entry.team.paymentVerified,
+          discordVerified: entry.team.discordVerified,
+          photoVerified: entry.team.photoVerified,
+          flyerVerified: entry.team.flyerVerified,
+          rulesAccepted: false,
+          adminVerified: false,
+          importReviewRequired: true,
+          sourceFile: event.fileName,
+        }),
+        bestKillsInTournament: Math.round(bestKills),
+        bestTeamPointsInTournament: bestSkillPoints,
       });
-      records += 1;
     }
   }
 
-  return records;
+  for (const rowChunk of chunkList(rows)) {
+    await prisma.rankingMatchRecord.createMany({ data: rowChunk });
+  }
+
+  return rows.length;
 }
 
 async function main() {

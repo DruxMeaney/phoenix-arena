@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   DEFAULT_PSR_CONFIG,
   PSR_MODEL_VERSION,
@@ -29,6 +30,7 @@ export interface PsrRankingSnapshot {
 }
 
 const QUERY_CHUNK_SIZE = 500;
+const USER_UPDATE_CHUNK_SIZE = 100;
 
 type UserWithRecords = Awaited<ReturnType<typeof fetchUsersForPsr>>[number];
 type MatchRecord = UserWithRecords["matchRecords"][number];
@@ -256,6 +258,67 @@ async function ensureModelVersion() {
   });
 }
 
+function caseAssignment<T>(
+  column: string,
+  rows: PsrLeaderboardRow[],
+  valueFor: (row: PsrLeaderboardRow) => T,
+  params: unknown[]
+): string {
+  const cases = rows
+    .map((row) => {
+      params.push(row.playerId, valueFor(row));
+      return "WHEN ? THEN ?";
+    })
+    .join(" ");
+  return `"${column}" = CASE "id" ${cases} ELSE "${column}" END`;
+}
+
+async function updateLeaderboardUsers(
+  rows: PsrLeaderboardRow[],
+  usersById: Map<string, UserWithRecords>
+) {
+  for (const rowChunk of chunkList(rows, USER_UPDATE_CHUNK_SIZE)) {
+    const params: unknown[] = [];
+    const now = new Date();
+    const assignments = [
+      caseAssignment("tier", rowChunk, (row) => row.tier, params),
+      caseAssignment("psrMu", rowChunk, (row) => row.mu, params),
+      caseAssignment("psrSigma", rowChunk, (row) => row.sigma, params),
+      caseAssignment("psrScore", rowChunk, (row) => row.scoreFinal, params),
+      caseAssignment("psrMatches", rowChunk, (row) => row.participaciones, params),
+      caseAssignment(
+        "peakPsr",
+        rowChunk,
+        (row) => Math.max(usersById.get(row.playerId)?.peakPsr ?? 0, row.peakScore),
+        params
+      ),
+      caseAssignment(
+        "peakScore",
+        rowChunk,
+        (row) => Math.max(usersById.get(row.playerId)?.peakScore ?? 0, row.scoreFinal),
+        params
+      ),
+      caseAssignment("psrModelVersion", rowChunk, () => PSR_MODEL_VERSION, params),
+      caseAssignment(
+        "psrLastEventAt",
+        rowChunk,
+        (row) => {
+          const records = usersById.get(row.playerId)?.matchRecords ?? [];
+          return records[records.length - 1]?.date ?? null;
+        },
+        params
+      ),
+      caseAssignment("updatedAt", rowChunk, () => now, params),
+    ];
+    const wherePlaceholders = rowChunk.map(() => "?").join(", ");
+    params.push(...rowChunk.map((row) => row.playerId));
+    await prisma.$executeRawUnsafe(
+      `UPDATE "User" SET ${assignments.join(", ")} WHERE "id" IN (${wherePlaceholders})`,
+      ...params
+    );
+  }
+}
+
 export async function getPsrRankingSnapshot(
   currentDate: Date = new Date()
 ): Promise<PsrRankingSnapshot> {
@@ -313,6 +376,9 @@ export async function rebuildAndPersistPsrRankings(
 
   await ensureModelVersion();
 
+  const deltaRows: Prisma.RankingDeltaCreateManyInput[] = [];
+  const eventLogIds: string[] = [];
+
   for (const eventResult of computation.eventResults) {
     const payload = eventPayload(eventResult.event);
     const eventLog = await prisma.rankingEventLog.upsert({
@@ -347,47 +413,25 @@ export async function rebuildAndPersistPsrRankings(
         resultHash: eventResult.resultHash,
       },
     });
+    eventLogIds.push(eventLog.id);
 
     for (const delta of eventResult.deltas) {
-      await prisma.rankingDelta.upsert({
-        where: {
-          eventLogId_playerId: {
-            eventLogId: eventLog.id,
-            playerId: delta.playerId,
-          },
-        },
-        update: {
-          modelVersion: PSR_MODEL_VERSION,
-          muBefore: delta.muBefore,
-          sigmaBefore: delta.sigmaBefore,
-          psrBefore: delta.psrBefore,
-          muAfter: delta.muAfter,
-          sigmaAfter: delta.sigmaAfter,
-          psrAfter: delta.psrAfter,
-          deltaPsr: delta.deltaPsr,
-          placement: delta.placement,
-          kills: delta.kills,
-          lobbyStrength: delta.lobbyStrength,
-          performanceSignal: delta.performanceSignal,
-          explanation: JSON.stringify(delta.explanation),
-        },
-        create: {
-          eventLogId: eventLog.id,
-          playerId: delta.playerId,
-          modelVersion: PSR_MODEL_VERSION,
-          muBefore: delta.muBefore,
-          sigmaBefore: delta.sigmaBefore,
-          psrBefore: delta.psrBefore,
-          muAfter: delta.muAfter,
-          sigmaAfter: delta.sigmaAfter,
-          psrAfter: delta.psrAfter,
-          deltaPsr: delta.deltaPsr,
-          placement: delta.placement,
-          kills: delta.kills,
-          lobbyStrength: delta.lobbyStrength,
-          performanceSignal: delta.performanceSignal,
-          explanation: JSON.stringify(delta.explanation),
-        },
+      deltaRows.push({
+        eventLogId: eventLog.id,
+        playerId: delta.playerId,
+        modelVersion: PSR_MODEL_VERSION,
+        muBefore: delta.muBefore,
+        sigmaBefore: delta.sigmaBefore,
+        psrBefore: delta.psrBefore,
+        muAfter: delta.muAfter,
+        sigmaAfter: delta.sigmaAfter,
+        psrAfter: delta.psrAfter,
+        deltaPsr: delta.deltaPsr,
+        placement: delta.placement,
+        kills: delta.kills,
+        lobbyStrength: delta.lobbyStrength,
+        performanceSignal: delta.performanceSignal,
+        explanation: JSON.stringify(delta.explanation),
       });
     }
 
@@ -400,25 +444,17 @@ export async function rebuildAndPersistPsrRankings(
     });
   }
 
-  const usersById = new Map(users.map((user) => [user.id, user]));
-  for (const row of computation.leaderboard) {
-    const user = usersById.get(row.playerId);
-    await prisma.user.update({
-      where: { id: row.playerId },
-      data: {
-        tier: row.tier,
-        psrMu: row.mu,
-        psrSigma: row.sigma,
-        psrScore: row.scoreFinal,
-        psrMatches: row.participaciones,
-        peakPsr: Math.max(user?.peakPsr ?? 0, row.peakScore),
-        peakScore: Math.max(user?.peakScore ?? 0, row.scoreFinal),
-        psrModelVersion: PSR_MODEL_VERSION,
-        psrLastEventAt:
-          user?.matchRecords[user.matchRecords.length - 1]?.date ?? null,
-      },
+  for (const eventLogIdChunk of chunkList(eventLogIds)) {
+    await prisma.rankingDelta.deleteMany({
+      where: { eventLogId: { in: eventLogIdChunk } },
     });
   }
+  for (const deltaChunk of chunkList(deltaRows)) {
+    await prisma.rankingDelta.createMany({ data: deltaChunk });
+  }
+
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  await updateLeaderboardUsers(computation.leaderboard, usersById);
 
   if (computation.leaderboard.length > 0) {
     const snapshotRows = computation.leaderboard.map((row) => ({
