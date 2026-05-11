@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { decodeExternalReference, getPayment } from "@/lib/mercadopago";
 import { prisma } from "@/lib/db";
+import { HttpError, httpErrorResponse } from "@/lib/http-error";
 
 /**
  * POST /api/tournaments/[id]/mercadopago-join
  *
- * Body: { paymentId: string }
- *
- * MercadoPago counterpart to paypal-join: verifies the payment, credits the
- * wallet with the USD amount encoded in external_reference, then performs
- * the standard join in the same request.
+ * MercadoPago counterpart to paypal-join. Same two-step transaction pattern:
+ * credit the deposit first (Tx A, idempotent), then charge the entry and
+ * create the entry row (Tx B). If Tx B fails after Tx A succeeded, the
+ * deposit stays in the wallet — the user never loses money.
  */
 export async function POST(
   request: NextRequest,
@@ -24,6 +24,7 @@ export async function POST(
   const paymentId: string | undefined = body?.paymentId;
   if (!paymentId) return NextResponse.json({ error: "paymentId requerido" }, { status: 400 });
 
+  // ── 1. Pre-checks ──────────────────────────────────────────────────────
   const tournament = await prisma.tournament.findUnique({
     where: { id },
     include: { entries: true },
@@ -39,18 +40,7 @@ export async function POST(
     return NextResponse.json({ error: "Ya estas inscrito" }, { status: 400 });
   }
 
-  // Idempotency: if a deposit was already recorded against this paymentId,
-  // we already credited the wallet (and presumably joined). Don't double-credit.
-  const existingDeposit = await prisma.transaction.findFirst({
-    where: { reference: paymentId, type: "deposit" },
-  });
-  if (existingDeposit) {
-    return NextResponse.json(
-      { error: "Este pago ya fue procesado anteriormente" },
-      { status: 400 },
-    );
-  }
-
+  // ── 2. Verify payment with MercadoPago (network call) ──────────────────
   let payment;
   try {
     payment = await getPayment(paymentId);
@@ -78,68 +68,116 @@ export async function POST(
     );
   }
 
-  const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-  if (!wallet) return NextResponse.json({ error: "Wallet no encontrado" }, { status: 500 });
+  const depositAmount = ref.amountUsd;
 
-  // Credit the deposit first so the audit trail shows funding before the entry charge.
-  await prisma.wallet.update({
-    where: { id: wallet.id },
-    data: { balance: { increment: ref.amountUsd } },
-  });
-  await prisma.transaction.create({
-    data: {
-      walletId: wallet.id,
-      type: "deposit",
-      amount: ref.amountUsd,
-      description: `Deposito via MercadoPago (entrada ${tournament.name}) - $${ref.amountUsd.toFixed(2)}`,
-      status: "completed",
-      reference: paymentId,
-    },
-  });
+  // ── 3. Tx A: credit deposit (idempotent) ───────────────────────────────
+  try {
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.transaction.findFirst({
+        where: { reference: paymentId, type: "deposit" },
+      });
+      if (existing) return; // already credited (retry / webhook beat us)
 
-  // Re-read balance and verify it covers the entry fee.
-  const fundedWallet = await prisma.wallet.findUnique({ where: { id: wallet.id } });
-  if (!fundedWallet || fundedWallet.balance < tournament.entryFee) {
+      const wallet = await tx.wallet.findUnique({ where: { userId: user.id } });
+      if (!wallet) throw new HttpError(500, "Wallet no encontrado");
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: depositAmount } },
+      });
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "deposit",
+          amount: depositAmount,
+          description: `Deposito via MercadoPago (entrada ${tournament.name}) - $${depositAmount.toFixed(2)}`,
+          status: "completed",
+          reference: paymentId,
+        },
+      });
+    });
+  } catch (err) {
+    console.error(
+      `[CRITICAL] MercadoPago payment ${paymentId} verified but deposit credit failed for user ${user.id}:`,
+      err,
+    );
     return NextResponse.json(
-      { error: "Saldo insuficiente tras el deposito", balance: fundedWallet?.balance ?? 0 },
-      { status: 400 },
+      { error: "Pago verificado pero el deposito fallo. Soporte fue notificado." },
+      { status: 500 },
     );
   }
 
-  await prisma.wallet.update({
-    where: { id: wallet.id },
-    data: { balance: { decrement: tournament.entryFee } },
-  });
-  await prisma.transaction.create({
-    data: {
-      walletId: wallet.id,
-      type: "tournament_entry",
-      amount: -tournament.entryFee,
-      description: `Inscripcion a ${tournament.name}`,
-      status: "completed",
-      reference: tournament.id,
-    },
-  });
+  // ── 4. Tx B: charge entry + create entry + bump pool ───────────────────
+  try {
+    await prisma.$transaction(async (tx) => {
+      const t = await tx.tournament.findUnique({
+        where: { id },
+        include: { entries: true },
+      });
+      if (!t) throw new HttpError(404, "Torneo no encontrado");
+      if (t.status !== "registration") {
+        throw new HttpError(
+          400,
+          "El registro se cerro mientras procesabamos tu pago. Tu deposito quedo en tu wallet.",
+        );
+      }
+      if (t.filledSlots >= t.maxSlots) {
+        throw new HttpError(
+          400,
+          "El torneo se lleno mientras procesabamos tu pago. Tu deposito quedo en tu wallet.",
+        );
+      }
+      if (t.entries.some((e) => e.userId === user.id)) {
+        throw new HttpError(400, "Ya estas inscrito");
+      }
 
-  await prisma.tournamentEntry.create({
-    data: {
-      tournamentId: tournament.id,
-      userId: user.id,
-      paidAmount: tournament.entryFee,
-    },
-  });
+      const wallet = await tx.wallet.findUnique({ where: { userId: user.id } });
+      if (!wallet) throw new HttpError(500, "Wallet no encontrado");
+      if (wallet.balance < t.entryFee) {
+        throw new HttpError(400, "Saldo insuficiente tras el deposito");
+      }
 
-  await prisma.tournament.update({
-    where: { id: tournament.id },
-    data: {
-      filledSlots: { increment: 1 },
-      prizePool: { increment: tournament.entryFee },
-    },
-  });
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: t.entryFee } },
+      });
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "tournament_entry",
+          amount: -t.entryFee,
+          description: `Inscripcion a ${t.name}`,
+          status: "completed",
+          reference: t.id,
+        },
+      });
+      await tx.tournamentEntry.create({
+        data: {
+          tournamentId: t.id,
+          userId: user.id,
+          paidAmount: t.entryFee,
+        },
+      });
+      await tx.tournament.update({
+        where: { id: t.id },
+        data: {
+          filledSlots: { increment: 1 },
+          prizePool: { increment: t.entryFee },
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof HttpError) return httpErrorResponse(err);
+    console.error("mercadopago-join entry-creation tx failed:", err);
+    return NextResponse.json(
+      { error: "El deposito se acredito pero la inscripcion fallo." },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
     message: "Inscripcion exitosa via MercadoPago",
-    deposited: ref.amountUsd,
+    deposited: depositAmount,
     entryFee: tournament.entryFee,
   });
 }

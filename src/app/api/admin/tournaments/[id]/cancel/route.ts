@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { HttpError, httpErrorResponse } from "@/lib/http-error";
 
 const CANCELLABLE_STATUSES = new Set(["draft", "registration", "check_in", "in_progress", "paused"]);
 
@@ -16,61 +17,70 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
   const reason: string | undefined = body?.reason;
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id },
-    include: { entries: true },
-  });
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const tournament = await tx.tournament.findUnique({
+        where: { id },
+        include: { entries: true },
+      });
 
-  if (!tournament) return NextResponse.json({ error: "Torneo no encontrado" }, { status: 404 });
+      if (!tournament) throw new HttpError(404, "Torneo no encontrado");
+      if (tournament.status === "cancelled") throw new HttpError(400, "El torneo ya esta cancelado");
+      if (tournament.status === "finished") throw new HttpError(400, "No se puede cancelar un torneo finalizado");
+      if (!CANCELLABLE_STATUSES.has(tournament.status)) {
+        throw new HttpError(400, `Estado no cancelable: ${tournament.status}`);
+      }
 
-  if (tournament.status === "cancelled") {
-    return NextResponse.json({ error: "El torneo ya esta cancelado" }, { status: 400 });
-  }
-  if (tournament.status === "finished") {
-    return NextResponse.json({ error: "No se puede cancelar un torneo finalizado" }, { status: 400 });
-  }
-  if (!CANCELLABLE_STATUSES.has(tournament.status)) {
-    return NextResponse.json({ error: `Estado no cancelable: ${tournament.status}` }, { status: 400 });
-  }
+      let refundedCount = 0;
+      let refundedTotal = 0;
 
-  let refundedCount = 0;
-  let refundedTotal = 0;
+      for (const entry of tournament.entries) {
+        const refund = entry.paidAmount ?? tournament.entryFee;
+        if (refund <= 0) continue;
+        const wallet = await tx.wallet.findUnique({ where: { userId: entry.userId } });
+        if (!wallet) continue;
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { increment: refund } },
+        });
+        await tx.transaction.create({
+          data: {
+            walletId: wallet.id,
+            type: "tournament_refund",
+            amount: refund,
+            description: `Reembolso: ${tournament.name} cancelado${reason ? ` (${reason})` : ""}`,
+            status: "completed",
+            reference: tournament.id,
+          },
+        });
+        refundedCount += 1;
+        refundedTotal += refund;
+      }
 
-  for (const entry of tournament.entries) {
-    const refund = entry.paidAmount ?? tournament.entryFee;
-    if (refund <= 0) continue;
-    const wallet = await prisma.wallet.findUnique({ where: { userId: entry.userId } });
-    if (!wallet) continue;
-    await prisma.wallet.update({
-      where: { id: wallet.id },
-      data: { balance: { increment: refund } },
+      await tx.tournament.update({
+        where: { id },
+        data: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          prizePool: 0,
+        },
+      });
+
+      return { refundedCount, refundedTotal, name: tournament.name };
+    }, {
+      // Refund loops can be slow if there are many entries — bump the
+      // default 5s transaction timeout to a more forgiving value.
+      timeout: 15_000,
     });
-    await prisma.transaction.create({
-      data: {
-        walletId: wallet.id,
-        type: "tournament_refund",
-        amount: refund,
-        description: `Reembolso: ${tournament.name} cancelado${reason ? ` (${reason})` : ""}`,
-        status: "completed",
-        reference: tournament.id,
-      },
+
+    return NextResponse.json({
+      message: `Torneo cancelado. ${result.refundedCount} reembolsos por $${result.refundedTotal.toFixed(2)}.`,
+      refundedCount: result.refundedCount,
+      refundedTotal: result.refundedTotal,
     });
-    refundedCount += 1;
-    refundedTotal += refund;
+  } catch (err) {
+    if (err instanceof HttpError) return httpErrorResponse(err);
+    console.error("cancel tournament error:", err);
+    return NextResponse.json({ error: "Error al cancelar el torneo" }, { status: 500 });
   }
-
-  await prisma.tournament.update({
-    where: { id },
-    data: {
-      status: "cancelled",
-      cancelledAt: new Date(),
-      prizePool: 0,
-    },
-  });
-
-  return NextResponse.json({
-    message: `Torneo cancelado. ${refundedCount} reembolsos por $${refundedTotal.toFixed(2)}.`,
-    refundedCount,
-    refundedTotal,
-  });
 }

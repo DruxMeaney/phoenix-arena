@@ -175,6 +175,9 @@ export async function POST(
 
   // Prize distribution: pay each placement per the configured splits.
   // Platform retains PLATFORM_COMMISSION of the pool; the rest is split.
+  // Wrapped in a single $transaction so either every winner is paid or none
+  // are; and idempotent against re-submission of the same results (an admin
+  // re-saving results does not double-pay).
   if (tournament.prizePool > 0) {
     const splits = resolvePrizeSplits(
       tournament.prizeDistribution,
@@ -182,32 +185,42 @@ export async function POST(
     );
     const distributablePool = tournament.prizePool * (1 - PLATFORM_COMMISSION);
 
-    for (let i = 0; i < splits.length; i++) {
-      const place = i + 1;
-      const placePct = splits[i];
-      if (placePct <= 0) continue;
-      const winner = results.find((r) => r.placement === place);
-      if (!winner) continue;
-
-      const prize = distributablePool * (placePct / 100);
-      const wallet = await prisma.wallet.findUnique({ where: { userId: winner.userId } });
-      if (!wallet) continue;
-
-      await prisma.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { increment: prize } },
+    await prisma.$transaction(async (tx) => {
+      const alreadyPaid = await tx.transaction.findFirst({
+        where: { reference: tournament.id, type: "tournament_win" },
       });
-      await prisma.transaction.create({
-        data: {
-          walletId: wallet.id,
-          type: "tournament_win",
-          amount: prize,
-          description: `Premio: ${place}° lugar en ${tournament.name}`,
-          status: "completed",
-          reference: tournament.id,
-        },
-      });
-    }
+      if (alreadyPaid) return; // results were already paid out — skip
+
+      for (let i = 0; i < splits.length; i++) {
+        const place = i + 1;
+        const placePct = splits[i];
+        if (placePct <= 0) continue;
+        const winner = results.find((r) => r.placement === place);
+        if (!winner) continue;
+
+        const prize = distributablePool * (placePct / 100);
+        const wallet = await tx.wallet.findUnique({ where: { userId: winner.userId } });
+        if (!wallet) continue;
+
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { increment: prize } },
+        });
+        await tx.transaction.create({
+          data: {
+            walletId: wallet.id,
+            type: "tournament_win",
+            amount: prize,
+            description: `Premio: ${place}° lugar en ${tournament.name}`,
+            status: "completed",
+            reference: tournament.id,
+          },
+        });
+      }
+    }, {
+      // Multi-winner payouts can take a bit; bump the default 5s timeout.
+      timeout: 15_000,
+    });
   }
 
   // Recalculate all rankings

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { capturePayPalOrder } from "@/lib/paypal";
 import { prisma } from "@/lib/db";
+import { HttpError, httpErrorResponse } from "@/lib/http-error";
 
 /**
  * POST /api/tournaments/[id]/paypal-join
@@ -11,8 +12,18 @@ import { prisma } from "@/lib/db";
  * same request. Used when the player doesn't have enough wallet balance to
  * cover the entry fee on its own.
  *
- * The captured amount is expected to cover at least the missing portion of
- * the entry fee; the remainder (if any) stays in the wallet as credit.
+ * Flow (designed so the user is never out money if anything fails after
+ * PayPal capture):
+ *
+ *   1. Pre-check the tournament (status, slots, not already joined) so we
+ *      never capture money for a tournament the user can't join.
+ *   2. Capture the PayPal order OUTSIDE any DB transaction.
+ *   3. Tx A — credit the deposit to the wallet. Idempotent against a prior
+ *      `deposit` tx with the same `reference = orderId`. This step is
+ *      "commit first" so even if step 4 fails, the user has their money.
+ *   4. Tx B — charge the entry fee, create the entry row, bump the pool.
+ *      If this fails the user keeps the deposit as wallet credit and we
+ *      return an explanatory error.
  */
 export async function POST(
   request: NextRequest,
@@ -26,6 +37,7 @@ export async function POST(
   const orderId: string | undefined = body?.orderId;
   if (!orderId) return NextResponse.json({ error: "orderId requerido" }, { status: 400 });
 
+  // ── 1. Pre-checks (read-only) ──────────────────────────────────────────
   const tournament = await prisma.tournament.findUnique({
     where: { id },
     include: { entries: true },
@@ -41,7 +53,7 @@ export async function POST(
     return NextResponse.json({ error: "Ya estas inscrito" }, { status: 400 });
   }
 
-  // Capture the PayPal order and credit the wallet.
+  // ── 2. Capture PayPal (network call, no DB locks held) ─────────────────
   let capturedAmount = 0;
   try {
     const capture = await capturePayPalOrder(orderId);
@@ -63,65 +75,115 @@ export async function POST(
     return NextResponse.json({ error: "Monto capturado invalido" }, { status: 400 });
   }
 
-  const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-  if (!wallet) return NextResponse.json({ error: "Wallet no encontrado" }, { status: 500 });
+  // ── 3. Tx A: credit deposit (idempotent) ───────────────────────────────
+  // If this fails the user's PayPal money is captured but our DB has no
+  // record — log critical so ops can reconcile. Webhooks (Fase B) close
+  // this loop automatically.
+  try {
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.transaction.findFirst({
+        where: { reference: orderId, type: "deposit" },
+      });
+      if (existing) return; // already credited (retry / webhook beat us)
 
-  // Credit the deposit first so the audit trail shows the funding step.
-  await prisma.wallet.update({
-    where: { id: wallet.id },
-    data: { balance: { increment: capturedAmount } },
-  });
-  await prisma.transaction.create({
-    data: {
-      walletId: wallet.id,
-      type: "deposit",
-      amount: capturedAmount,
-      description: `Deposito via PayPal (entrada ${tournament.name}) - $${capturedAmount.toFixed(2)}`,
-      status: "completed",
-      reference: orderId,
-    },
-  });
+      const wallet = await tx.wallet.findUnique({ where: { userId: user.id } });
+      if (!wallet) throw new HttpError(500, "Wallet no encontrado");
 
-  // Re-read balance after the deposit and verify it covers the entry fee.
-  const fundedWallet = await prisma.wallet.findUnique({ where: { id: wallet.id } });
-  if (!fundedWallet || fundedWallet.balance < tournament.entryFee) {
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: capturedAmount } },
+      });
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "deposit",
+          amount: capturedAmount,
+          description: `Deposito via PayPal (entrada ${tournament.name}) - $${capturedAmount.toFixed(2)}`,
+          status: "completed",
+          reference: orderId,
+        },
+      });
+    });
+  } catch (err) {
+    console.error(
+      `[CRITICAL] PayPal order ${orderId} captured for $${capturedAmount} but deposit credit failed for user ${user.id}:`,
+      err,
+    );
     return NextResponse.json(
-      { error: "Saldo insuficiente tras el deposito", balance: fundedWallet?.balance ?? 0 },
-      { status: 400 },
+      { error: "Pago capturado pero el deposito fallo. Soporte fue notificado." },
+      { status: 500 },
     );
   }
 
-  // Charge the entry fee.
-  await prisma.wallet.update({
-    where: { id: wallet.id },
-    data: { balance: { decrement: tournament.entryFee } },
-  });
-  await prisma.transaction.create({
-    data: {
-      walletId: wallet.id,
-      type: "tournament_entry",
-      amount: -tournament.entryFee,
-      description: `Inscripcion a ${tournament.name}`,
-      status: "completed",
-      reference: tournament.id,
-    },
-  });
+  // ── 4. Tx B: charge entry + create entry + bump pool ───────────────────
+  // If this fails the deposit from Tx A stays in the wallet — the user can
+  // try to join again or use the credit elsewhere.
+  try {
+    await prisma.$transaction(async (tx) => {
+      const t = await tx.tournament.findUnique({
+        where: { id },
+        include: { entries: true },
+      });
+      if (!t) throw new HttpError(404, "Torneo no encontrado");
+      if (t.status !== "registration") {
+        throw new HttpError(
+          400,
+          "El registro se cerro mientras procesabamos tu pago. Tu deposito quedo en tu wallet.",
+        );
+      }
+      if (t.filledSlots >= t.maxSlots) {
+        throw new HttpError(
+          400,
+          "El torneo se lleno mientras procesabamos tu pago. Tu deposito quedo en tu wallet.",
+        );
+      }
+      if (t.entries.some((e) => e.userId === user.id)) {
+        throw new HttpError(400, "Ya estas inscrito");
+      }
 
-  await prisma.tournamentEntry.create({
-    data: {
-      tournamentId: tournament.id,
-      userId: user.id,
-      paidAmount: tournament.entryFee,
-    },
-  });
+      const wallet = await tx.wallet.findUnique({ where: { userId: user.id } });
+      if (!wallet) throw new HttpError(500, "Wallet no encontrado");
+      if (wallet.balance < t.entryFee) {
+        throw new HttpError(400, "Saldo insuficiente tras el deposito");
+      }
 
-  await prisma.tournament.update({
-    where: { id: tournament.id },
-    data: {
-      filledSlots: { increment: 1 },
-      prizePool: { increment: tournament.entryFee },
-    },
-  });
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: t.entryFee } },
+      });
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "tournament_entry",
+          amount: -t.entryFee,
+          description: `Inscripcion a ${t.name}`,
+          status: "completed",
+          reference: t.id,
+        },
+      });
+      await tx.tournamentEntry.create({
+        data: {
+          tournamentId: t.id,
+          userId: user.id,
+          paidAmount: t.entryFee,
+        },
+      });
+      await tx.tournament.update({
+        where: { id: t.id },
+        data: {
+          filledSlots: { increment: 1 },
+          prizePool: { increment: t.entryFee },
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof HttpError) return httpErrorResponse(err);
+    console.error("paypal-join entry-creation tx failed:", err);
+    return NextResponse.json(
+      { error: "El deposito se acredito pero la inscripcion fallo." },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
     message: "Inscripcion exitosa via PayPal",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { HttpError, httpErrorResponse } from "@/lib/http-error";
 
 /** POST /api/tournaments/[id]/leave — Leave a tournament during registration and refund the entry fee */
 export async function POST(
@@ -12,54 +13,61 @@ export async function POST(
 
   const { id } = await params;
 
-  const tournament = await prisma.tournament.findUnique({ where: { id } });
-  if (!tournament) return NextResponse.json({ error: "Torneo no encontrado" }, { status: 404 });
+  // Single atomic transaction: re-read tournament + entry inside the tx so a
+  // concurrent admin action (cancel, start) can't slip a refund through after
+  // the status changes.
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const tournament = await tx.tournament.findUnique({ where: { id } });
+      if (!tournament) throw new HttpError(404, "Torneo no encontrado");
+      if (tournament.status !== "registration") {
+        throw new HttpError(400, "Ya no se puede salir del torneo (registro cerrado)");
+      }
 
-  // Refunds only allowed while registration is open. Once the tournament starts,
-  // the entry is locked in.
-  if (tournament.status !== "registration") {
-    return NextResponse.json(
-      { error: "Ya no se puede salir del torneo (registro cerrado)" },
-      { status: 400 },
-    );
-  }
-
-  const entry = await prisma.tournamentEntry.findUnique({
-    where: { tournamentId_userId: { tournamentId: id, userId: user.id } },
-  });
-  if (!entry) return NextResponse.json({ error: "No estas inscrito" }, { status: 400 });
-
-  const refund = entry.paidAmount ?? tournament.entryFee;
-
-  if (refund > 0) {
-    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
-    if (wallet) {
-      await prisma.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { increment: refund } },
+      const entry = await tx.tournamentEntry.findUnique({
+        where: { tournamentId_userId: { tournamentId: id, userId: user.id } },
       });
-      await prisma.transaction.create({
+      if (!entry) throw new HttpError(400, "No estas inscrito");
+
+      const refund = entry.paidAmount ?? tournament.entryFee;
+
+      if (refund > 0) {
+        const wallet = await tx.wallet.findUnique({ where: { userId: user.id } });
+        if (wallet) {
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { increment: refund } },
+          });
+          await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "tournament_refund",
+              amount: refund,
+              description: `Reembolso: salida de ${tournament.name}`,
+              status: "completed",
+              reference: tournament.id,
+            },
+          });
+        }
+      }
+
+      await tx.tournamentEntry.delete({ where: { id: entry.id } });
+
+      await tx.tournament.update({
+        where: { id },
         data: {
-          walletId: wallet.id,
-          type: "tournament_refund",
-          amount: refund,
-          description: `Reembolso: salida de ${tournament.name}`,
-          status: "completed",
-          reference: tournament.id,
+          filledSlots: { decrement: 1 },
+          prizePool: { decrement: refund },
         },
       });
-    }
+
+      return { refund };
+    });
+
+    return NextResponse.json({ message: "Salida exitosa, reembolso aplicado", refund: result.refund });
+  } catch (err) {
+    if (err instanceof HttpError) return httpErrorResponse(err);
+    console.error("leave tournament error:", err);
+    return NextResponse.json({ error: "Error al salir del torneo" }, { status: 500 });
   }
-
-  await prisma.tournamentEntry.delete({ where: { id: entry.id } });
-
-  await prisma.tournament.update({
-    where: { id },
-    data: {
-      filledSlots: { decrement: 1 },
-      prizePool: { decrement: refund },
-    },
-  });
-
-  return NextResponse.json({ message: "Salida exitosa, reembolso aplicado", refund });
 }
