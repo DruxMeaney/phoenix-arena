@@ -75,6 +75,12 @@ export async function createPreference(opts: {
 }): Promise<CreatedPreference> {
   const amountMxn = Math.round(opts.amountUsd * getMxnPerUsd() * 100) / 100;
 
+  // MercadoPago rejects localhost / non-public hosts in back_urls when paired
+  // with auto_return ("Host not in allowlist"). In dev we omit both: the user
+  // sees MP's default thank-you page after payment and the popup-close listener
+  // on the frontend handles the return.
+  const isLocalReturnUrl = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.|::1)/i.test(opts.returnUrl);
+
   const res = await fetch(`${MP_BASE}/checkout/preferences`, {
     method: "POST",
     headers: {
@@ -91,12 +97,16 @@ export async function createPreference(opts: {
         },
       ],
       external_reference: opts.externalReference,
-      back_urls: {
-        success: opts.returnUrl,
-        failure: opts.returnUrl,
-        pending: opts.returnUrl,
-      },
-      auto_return: "approved",
+      ...(isLocalReturnUrl
+        ? {}
+        : {
+            back_urls: {
+              success: opts.returnUrl,
+              failure: opts.returnUrl,
+              pending: opts.returnUrl,
+            },
+            auto_return: "approved",
+          }),
       ...(opts.payerEmail ? { payer: { email: opts.payerEmail } } : {}),
     }),
   });
