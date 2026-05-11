@@ -165,6 +165,8 @@ const tierBadge: Record<Tier, string> = {
   Detri: "badge-detri",
 };
 
+const MAX_VISIBLE_PLAYERS = 250;
+
 /* ── Component ────────────────────────────────────────────────── */
 export default function RankingClient({
   initialPlayers,
@@ -200,6 +202,11 @@ export default function RankingClient({
       return true;
     });
   }, [filterElegibilidad, filterTier, initialPlayers, searchQuery]);
+  const visiblePlayers = useMemo(
+    () => filteredPlayers.slice(0, MAX_VISIBLE_PLAYERS),
+    [filteredPlayers]
+  );
+  const hiddenPlayers = Math.max(0, filteredPlayers.length - visiblePlayers.length);
 
   return (
     <div className="min-h-screen bg-background">
@@ -320,8 +327,13 @@ export default function RankingClient({
           <div className="p-6 border-b border-border">
             <h2 className="text-lg font-bold">Tabla de Clasificacion</h2>
             <p className="text-sm text-muted mt-0.5">
-              {filteredPlayers.length} jugadores encontrados. Snapshot calculado desde registros rankeables.
+              {filteredPlayers.length} jugadores encontrados. Mostrando {visiblePlayers.length}. Snapshot calculado desde registros rankeables.
             </p>
+            {hiddenPlayers > 0 && (
+              <p className="text-xs text-muted mt-1">
+                Usa busqueda o filtros para encontrar jugadores fuera de los primeros {MAX_VISIBLE_PLAYERS}.
+              </p>
+            )}
           </div>
           {loadError && (
             <div className="mx-6 mt-5 rounded-xl border border-yellow-500/25 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
@@ -355,7 +367,7 @@ export default function RankingClient({
                     </td>
                   </tr>
                 )}
-                {filteredPlayers.map((p) => (
+                {visiblePlayers.map((p) => (
                   <tr
                     key={p.playerId ?? p.rank}
                     onClick={() => setSelectedPlayer(p)}
