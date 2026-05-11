@@ -4,6 +4,7 @@ Version del pipeline: `legacy-psr-import-0.1`
 Fuente: `../00_old`
 Salida staging: `data/legacy-psr/legacy-import.json`
 Fuente normalizada de la app: base Prisma (`dev.db` local / base productiva en deploy)
+Actualizacion verificada: `2026-05-11`
 
 ## Objetivo
 
@@ -29,6 +30,18 @@ La extraccion reproducible sobre `00_old` produjo:
 - 8,337 participaciones historicas de jugador.
 - 2,843 jugadores unicos normalizados.
 
+Distribucion por tipo de torneo en el staging vigente:
+
+```text
+all_skills = 49
+only_detri = 41
+scrim = 21
+pro_am_detri = 18
+community = 13
+legacy_custom = 13
+novice = 1
+```
+
 Despues de sembrar la base y recalcular PSR:
 
 - 2,843 usuarios legacy creados o actualizados.
@@ -36,6 +49,24 @@ Despues de sembrar la base y recalcular PSR:
 - 155 eventos PSR rankeables.
 - 8,272 deltas de ranking auditables.
 - 2,843 snapshots de ranking.
+
+Estado productivo observado despues de integrar la rama actualizada:
+
+```text
+ranking total = 2846 jugadores
+elegibles = 501
+PRO = 101
+AM = 200
+Detri total filas = 2545
+Detri elegibles = 200
+eventos PSR persistidos = 155
+deltas = 8272
+configHash = e6e1a57d30a5d0702e91dbff521a47fd4642d1668cdcb8da43e230cf09817a80
+```
+
+La diferencia entre `2,843` jugadores legacy y `2,846` jugadores productivos se
+explica por usuarios existentes de la app y/o usuarios de prueba/admin que
+conviven con el seed historico.
 
 La diferencia entre 156 eventos importados y 155 eventos PSR rankeables se debe
 a la politica del modelo: eventos `novice` se conservan como historico, pero no
@@ -132,6 +163,11 @@ La web app no debe consultar Excel en runtime. La app lee:
 - `RankingMatchRecord` para evidencia fuente;
 - `RankingEventLog` para reproducibilidad y hash del evento.
 
+La version actual de `/ranking` prioriza `RankingSnapshot` persistido para
+evitar timeouts y mantener la tabla alineada con el ultimo rebuild auditado. El
+frontend recibe una primera pagina de `250` jugadores y despues consulta
+`GET /api/ranking` para hidratar el ranking completo.
+
 Esto permite que la pagina cargue rapido y que el modelo sea auditable.
 
 ## Como entra informacion nueva despues de cada partida
@@ -178,3 +214,26 @@ Game/server export/API
 La captura manual no desaparece; funciona como fallback y como herramienta de
 disputa. Lo importante es que cualquier fuente, manual o automatica, termine en
 la misma tabla canonica y deje rastro auditable.
+
+## Riesgo pendiente: resolucion formal de aliases
+
+El import actual usa handles normalizados como identidad historica provisional.
+Esto es suficiente para demo, backtesting inicial y trazabilidad, pero no debe
+ser el mecanismo final si hay dinero real. Antes de activar pagos ligados a
+historial competitivo, se recomienda implementar:
+
+```text
+LegacyPlayerAlias(
+  normalizedHandle,
+  rawHandle,
+  userId,
+  confidence,
+  sourceFile,
+  reviewedBy,
+  reviewedAt,
+  status
+)
+```
+
+Esa tabla permitiria fusionar identidades revisadas, separar homonimos y dejar
+constancia de quien aprobo cada relacion entre historico y usuario real.

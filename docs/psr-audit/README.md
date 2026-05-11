@@ -1,8 +1,10 @@
 # Auditoria del Modelo Phoenix Skill Rating (PSR)
 
-Version del expediente: `psr-audit-0.1`
+Version del expediente: `psr-audit-0.2`
 Modelo auditado: `psr-0.1-draft`
 Esquema de captura: `psr-legacy-v1`
+Fecha de actualizacion: `2026-05-11`
+Commit de referencia productiva: `5983d1a`
 
 ## Proposito
 
@@ -26,6 +28,8 @@ afectar acceso a torneos, prestigio competitivo y dinero.
 - Que ventajas, limitaciones y riesgos metodologicos tiene?
 - Como se conecta el modelo con la web app y la base de datos?
 - Como se importo el historico real de `00_old` hacia PSR?
+- Cual es el estado productivo actual del ranking y del deploy?
+- Que controles existen para torneos con pagos, premios y reembolsos?
 
 ## Mapa del expediente
 
@@ -40,6 +44,8 @@ afectar acceso a torneos, prestigio competitivo y dinero.
 9. [Plan de validacion empirica](./08-validacion-empirica.md)
 10. [Referencias en formato Vancouver](./09-referencias-vancouver.md)
 11. [Importacion historica desde 00_old](./10-importacion-historica-00-old.md)
+12. [Estado actual de base, ranking y deploy](./11-estado-actual-base-y-deploy.md)
+13. [Auditoria operativa de pagos y premios](./12-auditoria-operativa-pagos.md)
 
 ## Ubicacion del modelo en el codigo
 
@@ -54,6 +60,10 @@ afectar acceso a torneos, prestigio competitivo y dinero.
 - Extractor historico: `scripts/extract_legacy_psr.py`
 - Seed historico: `prisma/seed-legacy-psr.ts`
 - Staging historico: `data/legacy-psr/legacy-import.json`
+- Pagos PayPal: `src/lib/paypal.ts`
+- Pagos MercadoPago: `src/lib/mercadopago.ts`
+- Premios y splits: `src/lib/prize-splits.ts`
+- Wallet/transacciones: `src/app/api/wallet/route.ts`
 
 ## Posicion metodologica central
 
@@ -69,13 +79,23 @@ Esto obliga a que un jugador no solo tenga buenos resultados, sino evidencia
 repetida y verificable. La incertidumbre castiga muestras pequenas y ayuda a
 evitar inflar jugadores por una sola partida extrema.
 
-## Estado actual
+## Estado actual verificado
 
-El modelo esta implementado en modo operativo, pero la recomendacion formal es
-mantenerlo en monitoreo hasta completar validacion empirica con datos reales:
+Produccion esta desplegada en Vercel desde la rama `main` y el ranking publico
+lee snapshots persistidos. Estado observado el `2026-05-11`:
 
-- backtesting con historico,
-- estabilidad semanal del top,
-- sensibilidad a outliers,
-- correlacion con resultados futuros,
-- revision de sesgos por torneo, region, modalidad y calidad de evidencia.
+- URL publica: `https://phoenix-arena.vercel.app`
+- rama productiva Vercel: `main`
+- estado del deploy: `READY`
+- jugadores en ranking: `2,846`
+- jugadores elegibles: `501`
+- eventos PSR persistidos: `155`
+- deltas auditables: `8,272`
+- hash de configuracion: `e6e1a57d30a5d0702e91dbff521a47fd4642d1668cdcb8da43e230cf09817a80`
+
+El modelo ya opera con base historica real importada desde `00_old`, pero la
+recomendacion formal sigue siendo mantener PSR como `shadow/monitoreo` antes de
+usarlo como criterio final de premios, acceso monetizado o resolucion automatica
+de disputas. La razon no es tecnica de implementacion, sino de validacion:
+faltan backtests longitudinales, revision de outliers, sensibilidad por tipo de
+torneo y calibracion de pesos con datos nuevos capturados por la app.

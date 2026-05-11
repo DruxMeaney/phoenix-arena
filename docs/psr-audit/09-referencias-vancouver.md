@@ -20,11 +20,21 @@
 
 10. Microsoft Research. TrueSkill ranking system. Microsoft Research. Available from: https://www.microsoft.com/en-us/research/project/trueskill-ranking-system/
 
+11. PayPal Developer. Orders API. PayPal. Available from: https://developer.paypal.com/docs/api/orders/v2/
+
+12. PayPal Developer. Verify webhook signatures. PayPal. Available from: https://developer.paypal.com/api/rest/webhooks/rest/#link-verifywebhooksignature
+
+13. Mercado Pago Developers. Webhooks notifications. Mercado Pago. Available from: https://www.mercadopago.com.mx/developers/en/docs/checkout-pro/additional-content/your-integrations/notifications/webhooks
+
+14. Prisma. Transactions and batch queries. Prisma Documentation. Available from: https://www.prisma.io/docs/orm/prisma-client/queries/transactions
+
 ## Notas de uso
 
 - Las referencias 1, 2, 4 y 5 son las fuentes tecnicas principales para el
   diseno PSR.
 - Las referencias 6, 7 y 8 explican antecedentes historicos y modelos de
   comparacion.
+- Las referencias 11 a 14 respaldan criterios operativos de pagos, webhooks e
+  integridad transaccional.
 - Las referencias deben revisarse antes de una publicacion academica formal
   para ajustar editorial, DOI y fecha de consulta segun el formato requerido.

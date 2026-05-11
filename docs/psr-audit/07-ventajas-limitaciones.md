@@ -36,6 +36,13 @@ modelo.
 
 Un sistema explicable y reconstruible es mas defendible que una suma opaca.
 
+### 8. Separacion frente al ledger financiero
+
+La version actual separa ranking y dinero: PSR explica habilidad, mientras
+`Wallet` y `Transaction` explican saldos. Esta separacion reduce el riesgo de
+que una correccion de rating modifique premios sin una decision administrativa
+visible.
+
 ## Limitaciones
 
 ### 1. Parametros iniciales requieren calibracion
@@ -61,6 +68,20 @@ de caja negra.
 
 Los archivos antiguos contienen placeholders, cambios de formato y bonuses
 artificiales. Deben importarse con revision.
+
+### 6. Aun no es PSR v1.0 monetizado
+
+Aunque el ranking esta publicado y la base historica ya fue importada, falta
+validacion empirica formal. Debe seguir etiquetado como `psr-0.1-draft` hasta
+completar backtesting, sensibilidad a outliers, revision de aliases y politica
+de disputas.
+
+### 7. Flujos financieros requieren endurecimiento
+
+La app ya contiene pagos, wallet, reembolsos y premios. Antes de dinero real se
+deben cerrar riesgos tecnicos como deposito manual de desarrollo, inscripcion
+wallet-only no atomica, idempotencia sin restriccion unica de base y conciliacion
+contra proveedores.
 
 ## Riesgos y mitigaciones
 
@@ -114,3 +135,22 @@ Mitigacion:
 - segmentar por `tournamentType`,
 - backtesting por modalidad,
 - percentiles por pool competitivo.
+
+### Riesgo: doble acreditacion o doble premio
+
+Mitigacion:
+
+- idempotencia por `Transaction.reference`,
+- webhooks con firma,
+- premios solo si el torneo no estaba `finished`,
+- pruebas de reintento y concurrencia,
+- ledger financiero append-only antes de live.
+
+### Riesgo: confusion entre ranking y pago
+
+Mitigacion:
+
+- documentar que PSR no mueve dinero por si mismo,
+- registrar premios como transacciones separadas,
+- exigir decision admin para ajustes financieros tras disputas,
+- conservar historial anterior en vez de borrarlo.

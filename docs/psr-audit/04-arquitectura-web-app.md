@@ -170,3 +170,89 @@ Porque separa:
 
 Esto evita que una pantalla o un admin modifique directamente el ranking sin
 dejar rastro.
+
+## 6. Arquitectura productiva actual
+
+Estado verificado el `2026-05-11`:
+
+```text
+Repositorio GitHub = DruxMeaney/phoenix-arena
+Rama productiva Vercel = main
+Dominio publico = https://phoenix-arena.vercel.app
+Deploy productivo = READY
+Commit productivo = 5983d1a
+```
+
+Vercel despliega automaticamente cuando `main` recibe cambios. Las ramas
+secundarias pueden generar previews, pero no reemplazan produccion hasta que se
+mergean a `main` y el build pasa.
+
+La app usa Next.js App Router y Prisma con cliente generado en `postinstall`.
+Esto es importante porque el cliente Prisma esta ignorado en Git; Vercel lo
+regenera durante la instalacion para evitar builds rotos por artefactos locales.
+
+## 7. Rendimiento del ranking
+
+La primera version calculaba todo el PSR en runtime. La arquitectura vigente
+usa snapshots persistidos:
+
+```text
+POST /api/ranking o captura admin
+  -> rebuild completo
+  -> RankingEventLog + RankingDelta + RankingSnapshot
+  -> User.psr*
+
+GET /api/ranking
+  -> lee ultimo RankingSnapshot
+  -> responde tabla publica y stats
+```
+
+La pagina `/ranking` recibe los primeros `250` jugadores desde el servidor y
+despues hidrata el listado completo desde `GET /api/ranking`. Esto reduce el
+riesgo de timeout, mantiene el SSR ligero y conserva una unica fuente auditada.
+
+## 8. APIs monetarias relacionadas
+
+El sistema de pagos no calcula PSR, pero afecta el contexto de torneos y por eso
+debe documentarse junto a la auditoria:
+
+```text
+POST /api/paypal/create-order
+POST /api/paypal/capture-order
+POST /api/paypal/webhook
+POST /api/mercadopago/create-preference
+POST /api/mercadopago/capture-payment
+POST /api/mercadopago/webhook
+POST /api/tournaments/[id]/join
+POST /api/tournaments/[id]/paypal-join
+POST /api/tournaments/[id]/mercadopago-join
+POST /api/tournaments/[id]/leave
+POST /api/admin/tournaments/[id]/cancel
+POST /api/wallet
+```
+
+PayPal esta configurado en produccion con modo `sandbox`. MercadoPago existe en
+codigo y mantiene endpoints/verificacion, aunque la UI actual oculta esa opcion
+principal. Antes de activar dinero real se debe pasar por una revision separada
+de seguridad, idempotencia, conciliacion y cumplimiento.
+
+## 9. Flujo integrado torneo + dinero + PSR
+
+```text
+usuario deposita o usa wallet
+  -> Transaction(deposit)
+  -> inscripcion a torneo
+  -> Transaction(tournament_entry)
+  -> TournamentEntry + prizePool
+  -> captura admin de resultados
+  -> TournamentResult
+  -> RankingMatchRecord
+  -> PSR rebuild
+  -> RankingDelta + RankingSnapshot
+  -> premios/reembolsos segun estado del torneo
+```
+
+PSR y dinero comparten el torneo como contexto, pero no se mezclan como fuente
+de verdad. El rating se deriva de resultados competitivos; el saldo se deriva
+de transacciones. Esta separacion es esencial para resolver disputas sin crear
+efectos colaterales ocultos.

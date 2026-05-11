@@ -1,6 +1,7 @@
 # 00_old Tournament Data Audit
 
-Fecha de revision: 2026-05-08
+Fecha de revision inicial: 2026-05-08
+Actualizacion de integracion PSR: 2026-05-11
 
 ## Resumen ejecutivo
 
@@ -15,6 +16,20 @@ El material es muy valioso para PSR porque puede convertirse en evidencia histor
 - separar skill rating de trust/compliance.
 
 No debe importarse directamente como ranking oficial sin limpieza. Hay formulas, placeholders, bonuses de matchpoint y formatos acumulados que contaminarian el rating si se usan sin normalizacion.
+
+Estado actual de integracion:
+
+- `data/legacy-psr/legacy-import.json` contiene `156` eventos importables.
+- El seed historico genero `8,337` participaciones y `2,843` jugadores legacy.
+- Produccion expone `2,846` jugadores en `/api/ranking`.
+- PSR persiste `155` eventos rankeables y `8,272` deltas auditables.
+- El evento `novice` se conserva como historico, pero no mueve ranking principal.
+
+La auditoria actualizada completa vive en `docs/psr-audit/`, especialmente:
+
+- `10-importacion-historica-00-old.md`
+- `11-estado-actual-base-y-deploy.md`
+- `12-auditoria-operativa-pagos.md`
 
 ## Inventario
 

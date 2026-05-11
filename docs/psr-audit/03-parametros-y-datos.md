@@ -21,6 +21,10 @@ placementWeight = 0.70
 killsWeight = 0.20
 teamWeight = 0.10
 maxMuAdjustment = 0.45
+soloEvidence.maxMuAdjustment = 0.28
+soloEvidence.sigmaShrink = 0.985
+decay.inactivityThresholdDays = 30
+decay.sigmaIncreasePerMonth = 0.45
 ```
 
 Estos parametros no deben verse como "verdades finales". Son una primera
@@ -57,6 +61,27 @@ Controlan cuanto pesan senales secundarias:
 - kills por ronda,
 - skill points,
 - performance adjustment.
+
+### Parametros de evidencia incompleta
+
+Controlan eventos donde no existe lobby completo o la senal de comparacion es
+mas debil:
+
+- `soloEvidence.maxMuAdjustment`
+- `soloEvidence.sigmaShrink`
+
+Su objetivo es permitir que una participacion individual aporte informacion sin
+inflar el rating como si hubiera una tabla completa de rivales.
+
+### Parametros de inactividad
+
+Controlan el aumento de incertidumbre cuando un jugador deja de competir:
+
+- `decay.inactivityThresholdDays = 30`
+- `decay.sigmaIncreasePerMonth = 0.45`
+
+El decaimiento no baja `mu`; aumenta `sigma` y por tanto reduce el PSR publico
+conservador hasta que haya nueva evidencia.
 
 ### Parametros operativos
 
@@ -121,6 +146,41 @@ Estos datos ahora se guardan en:
 - `TournamentResult`
 - `RankingMatchRecord`
 
+Extraccion reproducible vigente (`data/legacy-psr/legacy-import.json`):
+
+```text
+eventos importados = 156
+archivos fuente importados = 156
+equipos = 2786
+participaciones historicas = 8337
+jugadores unicos normalizados = 2843
+```
+
+Distribucion por tipo de torneo:
+
+```text
+all_skills = 49
+only_detri = 41
+scrim = 21
+pro_am_detri = 18
+community = 13
+legacy_custom = 13
+novice = 1
+```
+
+Estado productivo posterior al seed y rebuild:
+
+```text
+jugadores en ranking = 2846
+jugadores elegibles = 501
+eventos PSR rankeables = 155
+deltas auditables = 8272
+```
+
+La diferencia entre `156` eventos importados y `155` eventos PSR rankeables se
+debe a la politica actual: eventos `novice` se preservan como historico, pero no
+mueven el ranking competitivo principal.
+
 ## 5. Captura de torneo
 
 La captura admin debe registrar:
@@ -148,6 +208,28 @@ adminVerified
 evidenceUrl
 ```
 
+La captura admin actual tambien registra metadatos de torneo en
+`Tournament.captureMeta`:
+
+```text
+captureSchemaVersion
+scoringModel
+sourceType
+sourceId
+seasonId
+totalTeams
+mapCount
+verified
+submittedBy
+submittedAt
+legacyPlacementFormula
+matchpointTarget
+matchpointBonusExcludedFromPsr
+```
+
+Este bloque permite responder quien cargo el resultado, con que schema, que
+formula legacy se aplico y si el Matchpoint `999` fue excluido del PSR.
+
 ## 6. Reglas de normalizacion
 
 1. Si hay `roundResults`, se calculan subtotales por mapa.
@@ -156,6 +238,11 @@ evidenceUrl
 4. Si `rawPoints = 999`, no se usa como performance directa.
 5. Si falta `totalTeams`, se infiere desde equipos o slots.
 6. Todo evento comparte `sourceType` y `sourceId` para agruparlo.
+7. Si un jugador aparece dos veces en el mismo evento, PSR conserva para el
+   update la entrada competitivamente mas fuerte segun `skillPoints`, kills y
+   placement. Los registros fuente siguen disponibles como evidencia.
+8. `verified` en `RankingMatchRecord` depende del evento y de `adminVerified`
+   para resultados capturados por torneo.
 
 ## 7. Calidad de datos
 
@@ -171,3 +258,28 @@ PSR depende de la calidad de la evidencia. Por eso un evento debe clasificarse:
 
 En futuras versiones, cada tipo de fuente deberia tener un peso formal. En la
 version actual, el modelo ya conserva esa metadata para auditoria y backtesting.
+
+## 8. Datos monetarios asociados a torneos
+
+La base actual tambien captura variables monetarias que no forman parte del PSR,
+pero si del contexto de auditoria:
+
+```text
+Tournament.entryFee
+Tournament.prizePool
+Tournament.prizeDistribution
+Tournament.customPrizeSplits
+TournamentEntry.paidAmount
+TournamentEntry.discountAmount
+Wallet.balance
+Wallet.heldBalance
+Transaction.type
+Transaction.amount
+Transaction.status
+Transaction.reference
+```
+
+Regla metodologica: estos campos no deben alimentar `mu` ni `sigma`. Sirven para
+auditar pagos, reembolsos, premios y comisiones. PSR debe consumir resultados
+competitivos verificados; el subsistema financiero debe consumir transacciones
+idempotentes y reglas de premio versionadas.

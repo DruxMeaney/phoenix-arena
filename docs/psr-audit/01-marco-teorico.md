@@ -119,3 +119,25 @@ PSR reduce esos riesgos con:
 - performance individual acotada,
 - separacion entre habilidad y confianza,
 - reconstruccion completa desde registros.
+
+## 8. Extension operativa: ranking en una plataforma con dinero
+
+La version actual de Phoenix Arena ya incluye wallet, depositos PayPal sandbox,
+codigo MercadoPago, inscripciones pagadas, reembolsos, prize pools y
+distribucion de premios. Esto no cambia la matematica central del PSR, pero si
+cambia el marco teorico de auditoria.
+
+En una plataforma monetizada deben separarse tres verdades:
+
+```text
+verdad competitiva = resultados verificados
+verdad estadistica = PSR reconstruible desde eventos
+verdad financiera = ledger de transacciones y referencias externas
+```
+
+Una sola tabla de puntos no puede resolver esas tres responsabilidades. Si el
+ranking se mezcla con pagos, una correccion deportiva podria alterar dinero sin
+trazabilidad. Si los pagos se mezclan con ranking, un usuario podria comprar
+acceso a reputacion competitiva. Por eso PSR debe quedar conceptualmente
+aislado: mide habilidad bajo incertidumbre; no mide confianza, identidad,
+saldo, cumplimiento ni derecho automatico a premio.

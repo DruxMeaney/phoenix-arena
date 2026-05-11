@@ -1,5 +1,26 @@
 # Plan de Validacion Empirica
 
+Estado de base observado el `2026-05-11`:
+
+```text
+jugadores en ranking = 2846
+jugadores elegibles = 501
+jugadores en calibracion = 2345
+jugadores con decay activo = 2822
+eventos PSR persistidos = 155
+deltas auditables = 8272
+```
+
+Distribucion PSR observada:
+
+```text
+min = -9.1
+p25 = -2.3
+mediana = -0.5
+p75 = 1.9
+max = 28.6
+```
+
 ## 1. Objetivo
 
 Validar que PSR no solo sea teoricamente razonable, sino empiricamente util
@@ -71,6 +92,27 @@ Pipeline recomendado:
 6. correr PSR en modo shadow,
 7. comparar contra resultados posteriores.
 
+Base disponible para backtesting:
+
+```text
+156 eventos extraidos
+155 eventos rankeables
+8337 participaciones historicas
+2843 jugadores legacy normalizados
+```
+
+Diseño recomendado:
+
+1. Ordenar eventos por fecha inferida.
+2. Entrenar PSR con los primeros `70%` de eventos.
+3. Evaluar prediccion pairwise y top-k en el `30%` final.
+4. Repetir por tipo de torneo: `all_skills`, `only_detri`, `scrim`,
+   `pro_am_detri`, `community`, `legacy_custom`.
+5. Comparar contra dos baselines:
+   - puntos legacy acumulados,
+   - ranking por placement promedio.
+6. Reportar si PSR predice mejor sin aumentar volatilidad injustificada.
+
 ## 5. Criterios minimos para produccion monetizada
 
 PSR deberia pasar:
@@ -92,3 +134,37 @@ Despues de suficiente data, se espera:
 - mejor deteccion de talento nuevo sin sobrepublicarlo,
 - mejor explicacion ante usuarios,
 - base para matchmaking y torneos segmentados.
+
+## 7. Criterios numericos de aceptacion propuestos
+
+Para defender el modelo ante socios, jugadores y operadores, se recomiendan
+umbrales iniciales:
+
+```text
+top_10_weekly_overlap >= 0.70
+top_50_weekly_overlap >= 0.80
+pairwise_prediction_accuracy > baseline_legacy + 5 puntos porcentuales
+max_single_event_delta_p95 <= umbral definido por comite
+calibration_exit_rate_4_events >= 80%
+manual_audit_top_movers = 100% revisado semanalmente
+```
+
+Estos valores no son leyes matematicas; son metas de control para saber si el
+modelo se comporta con suficiente estabilidad antes de usarlo en decisiones con
+dinero.
+
+## 8. Validacion financiera paralela
+
+Como la app ahora contiene pagos, la validacion empirica de PSR debe correr en
+paralelo con una validacion financiera:
+
+- deposito aprobado por proveedor produce exactamente una transaccion;
+- webhooks duplicados no duplican saldo;
+- inscripcion incrementa `filledSlots` y `prizePool` una sola vez;
+- salida o cancelacion reembolsa exactamente lo cobrado;
+- cierre de torneo paga premios una sola vez;
+- comision de plataforma y comision de retiro son visibles en historial;
+- cada movimiento puede conciliarse contra `Transaction.reference`.
+
+El ranking puede pasar pruebas estadisticas y aun asi no estar listo para dinero
+real si el ledger no pasa estas pruebas.

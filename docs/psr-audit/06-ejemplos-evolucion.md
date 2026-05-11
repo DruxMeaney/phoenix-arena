@@ -151,3 +151,48 @@ Jugador B gana contra jugadores en calibracion.
 Aunque ambos tengan placement 1, el lobby de A aporta mas evidencia. PSR debe
 mover mas a A que a B, porque vencer a rivales fuertes reduce mas incertidumbre
 sobre habilidad alta.
+
+## Ejemplo 7: lectura de un jugador real en la base actual
+
+Ejemplo observado en produccion:
+
+```text
+Jugador: Dongy
+rank = 1
+matches = 45
+mu = 40.9095
+sigma = 4.0955
+PSR = 28.6
+```
+
+Interpretacion:
+
+- `mu` alto indica desempeno historico fuerte.
+- `sigma` ya bajo frente al prior inicial indica evidencia repetida.
+- `PSR = mu - 3*sigma` conserva prudencia: aunque la media supera 40, el
+  puntaje publico se publica en 28.6.
+- El jugador esta en decay activo porque la base importada es historica; esto no
+  dice que empeoro, solo que la certeza actual debe renovarse con nuevos
+  eventos.
+
+## Ejemplo 8: torneo con pago y cierre de resultados
+
+Flujo esperado:
+
+```text
+entryFee = 20
+jugador paga con wallet
+TournamentEntry.paidAmount = 20
+Tournament.prizePool += 20
+admin captura placement/kills/evidencia
+PSR reconstruye deltas
+si torneo termina, prizePool se distribuye por split
+```
+
+Interpretacion:
+
+El pago de entrada no sube PSR. Solo crea derecho operativo a participar. El PSR
+se mueve despues, cuando existe resultado competitivo verificado. Si hay disputa
+de resultado, se corrige el evento y se reconstruye PSR; si ya hubo premio, el
+ajuste financiero debe registrarse como nueva transaccion o resolucion, no
+borrando silenciosamente el historial.

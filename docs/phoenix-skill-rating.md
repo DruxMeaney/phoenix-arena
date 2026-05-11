@@ -4,6 +4,10 @@ Version implementada: `psr-0.1-draft`
 
 Esquema de captura de torneos: `psr-legacy-v1`
 
+Actualizacion de auditoria: `2026-05-11`
+
+Expediente extendido: `docs/psr-audit/`
+
 ## Objetivo
 
 Phoenix Skill Rating es la propuesta de ranking competitivo para Phoenix Arena. Su objetivo es clasificar jugadores de forma robusta, auditable y explicable cuando la plataforma tenga torneos, retos y premios con dinero.
@@ -50,6 +54,29 @@ La version `psr-0.1-draft` ya esta aplicada en el proyecto:
 - Migracion de auditoria: `prisma/migrations/20260506052048_add_psr_audit`
 
 El modelo corre en estado `shadow`: calcula PSR real, persiste deltas cuando se confirma un resultado o cuando un admin ejecuta rebuild, pero todavia debe validarse con historico antes de usarse como criterio final de premios.
+
+Estado productivo observado el `2026-05-11`:
+
+```text
+URL = https://phoenix-arena.vercel.app
+rama Vercel = main
+deploy = READY
+commit = 5983d1a
+totalPlayers = 2846
+eligible = 501
+events = 155
+deltas = 8272
+configHash = e6e1a57d30a5d0702e91dbff521a47fd4642d1668cdcb8da43e230cf09817a80
+```
+
+La app ya contiene wallet, PayPal sandbox, MercadoPago en codigo, reembolsos y
+premios por torneo. Por eso la auditoria ampliada separa tres dominios:
+
+```text
+PSR = habilidad y ranking
+captura = evidencia competitiva
+ledger = saldos, pagos, reembolsos y premios
+```
 
 ## Integracion de parametros historicos `00_old`
 
@@ -299,6 +326,18 @@ Antes de activar PSR para pagos o premios, correr pruebas con historico:
 - comportamiento tras inactividad
 - casos con disputas o evidencia incompleta
 
+Base disponible para esa validacion:
+
+```text
+156 eventos extraidos desde 00_old
+155 eventos rankeables
+8337 participaciones historicas
+2843 jugadores legacy normalizados
+```
+
+El expediente `docs/psr-audit/08-validacion-empirica.md` define criterios
+propuestos para estabilidad, predictividad, outliers y calibracion.
+
 ## Fases de implementacion
 
 ### Fase 1: Transparencia y baseline
@@ -322,6 +361,18 @@ Antes de activar PSR para pagos o premios, correr pruebas con historico:
 - Activar snapshots por temporada.
 - Abrir mecanismo formal de disputa.
 - Usar PSR como criterio oficial de clasificacion y premios.
+
+Bloqueadores actuales antes de `psr-1.0-production`:
+
+- backtest formal con `00_old`;
+- resolucion de aliases historicos;
+- pruebas de sensibilidad por modalidad;
+- politica de disputa conectada a cambios de PSR;
+- deshabilitar deposito manual de desarrollo en produccion;
+- envolver inscripcion wallet-only en transaccion atomica;
+- agregar idempotencia/ledger mas fuerte para `Transaction`;
+- conciliacion diaria contra PayPal/MercadoPago;
+- rotacion de credenciales antes de modo live.
 
 ## Referencias
 

@@ -23,6 +23,15 @@ mu_0 = 25
 sigma_0 = 25 / 3
 ```
 
+La configuracion activa observada en produccion tiene hash:
+
+```text
+configHash = e6e1a57d30a5d0702e91dbff521a47fd4642d1668cdcb8da43e230cf09817a80
+```
+
+Ese hash permite detectar si la tabla publicada corresponde exactamente a los
+parametros documentados.
+
 ## 2. Puntaje publico conservador
 
 El puntaje visible no es `mu`. Es:
@@ -213,6 +222,17 @@ sigma = sigma + monthsInactive * sigmaIncreasePerMonth
 Esto no castiga moralmente al jugador; reconoce que el estado competitivo puede
 cambiar con el tiempo.
 
+Parametros activos:
+
+```text
+inactivityThresholdDays = 30
+sigmaIncreasePerMonth = 0.45
+```
+
+En la base historica actual hay muchos jugadores con decay activo porque los
+eventos importados son antiguos respecto a la fecha de despliegue. Esto es un
+comportamiento esperado del modelo conservador.
+
 ## 12. Matchpoint y el problema del 999
 
 En datos historicos, el bonus de Matchpoint podia llevar el total bruto a `999`.
@@ -227,3 +247,35 @@ matchpointWin = true/false
 
 El `999` no entra como performance numerica porque distorsionaria el modelo. Se
 guarda para auditoria y para explicar el evento, no para inflar habilidad.
+
+## 13. Elegibilidad, percentiles y tiers
+
+Un jugador entra al pool elegible cuando:
+
+```text
+matches_i >= minRankedMatches
+minRankedMatches = 4
+```
+
+Los tiers se calculan por percentil dentro del pool elegible:
+
+```text
+PRO   = percentil alto del pool elegible
+AM    = percentil medio del pool elegible
+Detri = resto del pool elegible o jugadores en calibracion
+```
+
+En la base productiva observada:
+
+```text
+totalPlayers = 2846
+eligible = 501
+calibrating = 2345
+PRO = 101
+AM = 200
+Detri elegibles = 200
+```
+
+Esto confirma que el modelo no publica como competitivo pleno a la mayoria de
+usuarios con poca evidencia; los conserva visibles, pero marcados por
+calibracion/incertidumbre.
