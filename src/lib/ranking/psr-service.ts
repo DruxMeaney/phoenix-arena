@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   DEFAULT_PSR_CONFIG,
+  PSR_PHASE,
   PSR_MODEL_VERSION,
   computePsrLeaderboard,
   hashRankingPayload,
@@ -42,6 +43,11 @@ function chunkList<T>(items: T[], size = QUERY_CHUNK_SIZE): T[][] {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
+}
+
+function round(value: number, digits = 4): number {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
 }
 
 async function fetchBaseUsers() {
@@ -420,6 +426,80 @@ export async function getPsrRankingSnapshot(
       stats: statsForRows([], 0, 0, 0, hashRankingPayload(DEFAULT_PSR_CONFIG)),
       loadError: "No se pudo calcular el ranking PSR en este momento.",
     };
+  }
+}
+
+export async function getLatestPersistedPsrRankingSnapshot(): Promise<PsrRankingSnapshot> {
+  try {
+    const latest = await prisma.rankingSnapshot.findFirst({
+      where: { modelVersion: PSR_MODEL_VERSION },
+      orderBy: { snapshotAt: "desc" },
+      select: { snapshotAt: true },
+    });
+
+    if (!latest) return getPsrRankingSnapshot();
+
+    const snapshots = await prisma.rankingSnapshot.findMany({
+      where: {
+        modelVersion: PSR_MODEL_VERSION,
+        snapshotAt: latest.snapshotAt,
+      },
+      orderBy: { rank: "asc" },
+      include: {
+        player: {
+          select: {
+            username: true,
+            peakPsr: true,
+          },
+        },
+      },
+    });
+
+    const rankings: PsrLeaderboardRow[] = snapshots.map((snapshot) => {
+      const peakScore = Math.max(snapshot.player.peakPsr, snapshot.psr);
+      return {
+        rank: snapshot.rank,
+        playerId: snapshot.playerId,
+        nombre: snapshot.player.username,
+        tier: snapshot.tier as PsrLeaderboardRow["tier"],
+        participaciones: snapshot.matchesPlayed,
+        impacto: round(snapshot.mu, 1),
+        placement: round(snapshot.psr, 1),
+        consistencia: round(Math.max(0, 100 - snapshot.sigma * 10), 1),
+        teamSuccess: round(peakScore, 1),
+        scoreFinal: round(snapshot.psr, 1),
+        percentil: snapshot.percentile,
+        isCalibrating: snapshot.isCalibrating,
+        isDecaying: snapshot.isDecaying,
+        decayMultiplier: snapshot.decayMultiplier,
+        peakScore: round(peakScore, 1),
+        phase: PSR_PHASE,
+        mu: round(snapshot.mu, 4),
+        sigma: round(snapshot.sigma, 4),
+        psr: round(snapshot.psr, 2),
+        modelVersion: snapshot.modelVersion,
+      };
+    });
+
+    const [events, deltas] = await Promise.all([
+      prisma.rankingEventLog.count({ where: { modelVersion: PSR_MODEL_VERSION } }),
+      prisma.rankingDelta.count({ where: { modelVersion: PSR_MODEL_VERSION } }),
+    ]);
+
+    return {
+      rankings,
+      stats: statsForRows(
+        rankings,
+        rankings.length,
+        events,
+        deltas,
+        hashRankingPayload(DEFAULT_PSR_CONFIG)
+      ),
+      loadError: null,
+    };
+  } catch (error) {
+    console.error("Unable to load persisted PSR ranking", error);
+    return getPsrRankingSnapshot();
   }
 }
 

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import {
-  getPsrRankingSnapshot,
+  getLatestPersistedPsrRankingSnapshot,
   rebuildAndPersistPsrRankings,
 } from "@/lib/ranking/psr-service";
 
-/** GET /api/ranking - Compute the current PSR leaderboard without mutating audit tables. */
+/** GET /api/ranking - Read the latest persisted PSR leaderboard for fast public pages. */
 export async function GET() {
-  const snapshot = await getPsrRankingSnapshot();
+  const snapshot = await getLatestPersistedPsrRankingSnapshot();
   return NextResponse.json(snapshot);
 }
 
