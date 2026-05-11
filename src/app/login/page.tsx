@@ -61,6 +61,7 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const showDevLogin = process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === "1";
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-16">
@@ -90,27 +91,27 @@ function LoginContent() {
           Continuar con Discord
         </a>
 
-        {/* Dev login — only works when ENABLE_DEV_LOGIN=1 + NODE_ENV !== production.
-            Button is always rendered; the endpoint returns 404 if not enabled. */}
-        <button
-          type="button"
-          onClick={async () => {
-            const res = await fetch("/api/auth/dev-login", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username: "test_player" }),
-            });
-            if (res.ok) {
-              window.location.href = "/torneos";
-            } else {
-              const err = await res.json().catch(() => ({}));
-              alert(err.error || "Dev login no disponible. Configura ENABLE_DEV_LOGIN=1 en .env");
-            }
-          }}
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-surface-2 border border-dashed border-border text-muted hover:text-foreground text-xs transition-colors"
-        >
-          Dev login (testing — solo si ENABLE_DEV_LOGIN=1)
-        </button>
+        {showDevLogin && (
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await fetch("/api/auth/dev-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: "test_player" }),
+              });
+              if (res.ok) {
+                window.location.href = "/torneos";
+              } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || "Dev login no disponible. Configura ENABLE_DEV_LOGIN=1 en .env");
+              }
+            }}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-surface-2 border border-dashed border-border text-muted hover:text-foreground text-xs transition-colors"
+          >
+            Dev login (testing)
+          </button>
+        )}
 
         {/* Divider */}
         <div className="flex items-center gap-4">
