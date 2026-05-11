@@ -32,8 +32,9 @@ export interface PsrRankingSnapshot {
 const QUERY_CHUNK_SIZE = 500;
 const USER_UPDATE_CHUNK_SIZE = 100;
 
-type UserWithRecords = Awaited<ReturnType<typeof fetchUsersForPsr>>[number];
-type MatchRecord = UserWithRecords["matchRecords"][number];
+type BaseUser = Awaited<ReturnType<typeof fetchBaseUsers>>[number];
+type MatchRecord = Awaited<ReturnType<typeof fetchPsrMatchRecords>>[number];
+type UserWithRecords = BaseUser & { matchRecords: MatchRecord[] };
 
 function chunkList<T>(items: T[], size = QUERY_CHUNK_SIZE): T[][] {
   const chunks: T[][] = [];
@@ -43,22 +44,61 @@ function chunkList<T>(items: T[], size = QUERY_CHUNK_SIZE): T[][] {
   return chunks;
 }
 
-async function fetchUsersForPsr() {
-  const users = await prisma.user.findMany({
+async function fetchBaseUsers() {
+  return prisma.user.findMany({
     where: { status: "active" },
     orderBy: { username: "asc" },
+    select: {
+      id: true,
+      username: true,
+      peakPsr: true,
+      peakScore: true,
+    },
   });
+}
+
+async function fetchPsrMatchRecords(playerIds: string[]) {
+  return prisma.rankingMatchRecord.findMany({
+    where: { playerId: { in: playerIds } },
+    orderBy: { date: "asc" },
+    select: {
+      id: true,
+      playerId: true,
+      eventId: true,
+      sourceId: true,
+      tournamentId: true,
+      sourceType: true,
+      seasonId: true,
+      tournamentType: true,
+      date: true,
+      evidenceUrl: true,
+      verified: true,
+      kills: true,
+      deaths: true,
+      position: true,
+      totalTeams: true,
+      roundsPlayed: true,
+      averagePlacement: true,
+      averageKills: true,
+      teamKills: true,
+      teamPoints: true,
+      skillPoints: true,
+      rawPoints: true,
+      matchpointWin: true,
+      matchpointBonus: true,
+      bestKillsInTournament: true,
+      bestTeamPointsInTournament: true,
+    },
+  });
+}
+
+async function fetchUsersForPsr(): Promise<UserWithRecords[]> {
+  const users = await fetchBaseUsers();
   if (users.length === 0) return [];
 
-  const recordsByPlayer = new Map<
-    string,
-    Awaited<ReturnType<typeof prisma.rankingMatchRecord.findMany>>
-  >();
+  const recordsByPlayer = new Map<string, MatchRecord[]>();
   for (const idChunk of chunkList(users.map((user) => user.id))) {
-    const records = await prisma.rankingMatchRecord.findMany({
-      where: { playerId: { in: idChunk } },
-      orderBy: { date: "asc" },
-    });
+    const records = await fetchPsrMatchRecords(idChunk);
     for (const record of records) {
       const current = recordsByPlayer.get(record.playerId) ?? [];
       current.push(record);
