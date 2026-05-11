@@ -146,6 +146,47 @@ export default function WalletPage() {
 
   useEffect(() => { fetchWallet(); }, [fetchWallet]);
 
+  // Handle PayPal full-page redirect fallback. When the popup is blocked or
+  // closed without our postMessage listener firing, PayPal lands the user on
+  // /wallet?payment=success&token=ORDER_ID&PayerID=... — capture the order
+  // here so the balance is credited even outside the popup flow.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("payment");
+    const orderId = params.get("token");
+    const cleanUrl = () => window.history.replaceState({}, "", window.location.pathname);
+
+    if (status === "cancelled") {
+      setMessage({ type: "error", text: "Pago cancelado en PayPal" });
+      cleanUrl();
+      return;
+    }
+
+    if (status === "success" && orderId) {
+      (async () => {
+        try {
+          const captureRes = await fetch("/api/paypal/capture-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId }),
+          });
+          const captureData = await captureRes.json().catch(() => ({}));
+          if (!captureRes.ok) throw new Error(captureData.error || "Error al confirmar el pago de PayPal");
+          setMessage({
+            type: "success",
+            text: `Deposito de $${(captureData.amount ?? 0).toFixed(2)} exitoso`,
+          });
+          fetchWallet();
+        } catch (err) {
+          setMessage({ type: "error", text: (err as Error).message });
+        } finally {
+          cleanUrl();
+        }
+      })();
+    }
+  }, [fetchWallet]);
+
   const handleDeposit = async () => {
     const amt = selectedAmount || parseFloat(customAmount);
     if (!amt || amt < 1) { setMessage({ type: "error", text: "Ingresa un monto valido" }); return; }
