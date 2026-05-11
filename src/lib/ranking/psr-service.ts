@@ -319,6 +319,36 @@ async function updateLeaderboardUsers(
   }
 }
 
+function rankingEventLogId(event: PsrEvent): string {
+  const digest = hashRankingPayload({
+    modelVersion: PSR_MODEL_VERSION,
+    sourceType: event.sourceType,
+    sourceId: event.sourceId,
+  }).slice(0, 24);
+  return `rel_${digest}`;
+}
+
+async function deleteExistingEventLogs(eventResults: { event: PsrEvent }[]) {
+  const sourceIdsByType = new Map<string, Set<string>>();
+  for (const eventResult of eventResults) {
+    const ids = sourceIdsByType.get(eventResult.event.sourceType) ?? new Set<string>();
+    ids.add(eventResult.event.sourceId);
+    sourceIdsByType.set(eventResult.event.sourceType, ids);
+  }
+
+  for (const [sourceType, sourceIds] of sourceIdsByType.entries()) {
+    for (const sourceIdChunk of chunkList([...sourceIds])) {
+      await prisma.rankingEventLog.deleteMany({
+        where: {
+          sourceType,
+          sourceId: { in: sourceIdChunk },
+          modelVersion: PSR_MODEL_VERSION,
+        },
+      });
+    }
+  }
+}
+
 export async function getPsrRankingSnapshot(
   currentDate: Date = new Date()
 ): Promise<PsrRankingSnapshot> {
@@ -376,48 +406,33 @@ export async function rebuildAndPersistPsrRankings(
 
   await ensureModelVersion();
 
+  await deleteExistingEventLogs(computation.eventResults);
+
+  const eventLogRows: Prisma.RankingEventLogCreateManyInput[] = [];
   const deltaRows: Prisma.RankingDeltaCreateManyInput[] = [];
-  const eventLogIds: string[] = [];
+  const processedRecordIds = new Set<string>();
 
   for (const eventResult of computation.eventResults) {
     const payload = eventPayload(eventResult.event);
-    const eventLog = await prisma.rankingEventLog.upsert({
-      where: {
-        sourceType_sourceId_modelVersion: {
-          sourceType: eventResult.event.sourceType,
-          sourceId: eventResult.event.sourceId,
-          modelVersion: PSR_MODEL_VERSION,
-        },
-      },
-      update: {
-        status: "processed",
-        seasonId: eventResult.event.seasonId,
-        tournamentId: eventResult.event.tournamentId,
-        matchId: eventResult.event.matchId,
-        occurredAt: eventResult.event.occurredAt,
-        payload: JSON.stringify(payload),
-        evidenceUrl: eventResult.event.evidenceUrl,
-        resultHash: eventResult.resultHash,
-      },
-      create: {
-        sourceType: eventResult.event.sourceType,
-        sourceId: eventResult.event.sourceId,
-        seasonId: eventResult.event.seasonId,
-        tournamentId: eventResult.event.tournamentId,
-        matchId: eventResult.event.matchId,
-        modelVersion: PSR_MODEL_VERSION,
-        status: "processed",
-        occurredAt: eventResult.event.occurredAt,
-        payload: JSON.stringify(payload),
-        evidenceUrl: eventResult.event.evidenceUrl,
-        resultHash: eventResult.resultHash,
-      },
+    const eventLogId = rankingEventLogId(eventResult.event);
+    eventLogRows.push({
+      id: eventLogId,
+      sourceType: eventResult.event.sourceType,
+      sourceId: eventResult.event.sourceId,
+      seasonId: eventResult.event.seasonId,
+      tournamentId: eventResult.event.tournamentId,
+      matchId: eventResult.event.matchId,
+      modelVersion: PSR_MODEL_VERSION,
+      status: "processed",
+      occurredAt: eventResult.event.occurredAt,
+      payload: JSON.stringify(payload),
+      evidenceUrl: eventResult.event.evidenceUrl,
+      resultHash: eventResult.resultHash,
     });
-    eventLogIds.push(eventLog.id);
 
     for (const delta of eventResult.deltas) {
       deltaRows.push({
-        eventLogId: eventLog.id,
+        eventLogId,
         playerId: delta.playerId,
         modelVersion: PSR_MODEL_VERSION,
         muBefore: delta.muBefore,
@@ -435,8 +450,18 @@ export async function rebuildAndPersistPsrRankings(
       });
     }
 
+    for (const recordId of eventResult.event.recordIds) {
+      processedRecordIds.add(recordId);
+    }
+  }
+
+  for (const eventLogChunk of chunkList(eventLogRows)) {
+    await prisma.rankingEventLog.createMany({ data: eventLogChunk });
+  }
+
+  for (const recordIdChunk of chunkList([...processedRecordIds])) {
     await prisma.rankingMatchRecord.updateMany({
-      where: { id: { in: eventResult.event.recordIds } },
+      where: { id: { in: recordIdChunk } },
       data: {
         psrProcessedAt: snapshotAt,
         modelVersion: PSR_MODEL_VERSION,
@@ -444,11 +469,6 @@ export async function rebuildAndPersistPsrRankings(
     });
   }
 
-  for (const eventLogIdChunk of chunkList(eventLogIds)) {
-    await prisma.rankingDelta.deleteMany({
-      where: { eventLogId: { in: eventLogIdChunk } },
-    });
-  }
   for (const deltaChunk of chunkList(deltaRows)) {
     await prisma.rankingDelta.createMany({ data: deltaChunk });
   }
