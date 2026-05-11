@@ -297,7 +297,7 @@ export default function Home() {
       {/* ════════ HERO — Minimal, Phoenix-centered ════════ */}
       <section className="relative overflow-hidden min-h-[100dvh] flex flex-col items-center justify-center">
         {/* Background glows */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/3 h-[600px] w-[600px] rounded-full bg-fuchsia-500/15 blur-[150px] sm:h-[800px] sm:w-[800px]" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/3 h-[600px] w-[600px] rounded-full bg-purple-500/18 blur-[150px] sm:h-[800px] sm:w-[800px]" />
         <div className="pointer-events-none absolute right-0 top-24 h-[360px] w-[42vw] rounded-full bg-cyan-400/[.08] blur-[110px]" />
         <div className="pointer-events-none absolute left-1/2 bottom-0 h-[400px] w-[90vw] -translate-x-1/2 rounded-full bg-red-600/[.08] blur-[100px]" />
 
@@ -306,13 +306,13 @@ export default function Home() {
           <div className="mb-8 flex justify-center">
             <div className="relative">
               {/* Purple aura behind logo */}
-              <div className="absolute inset-0 scale-125 rounded-full bg-fuchsia-500/22 blur-[64px]" />
-              <div className="absolute inset-0 scale-110 rounded-full bg-red-500/18 blur-[34px]" />
+              <div className="absolute inset-0 scale-125 rounded-full bg-purple-500/40 blur-[68px]" />
+              <div className="absolute inset-0 scale-110 rounded-full bg-violet-600/38 blur-[38px]" />
               <img
                 src="/logo-color.png"
                 alt="Phoenix Arena"
                 className="relative w-64 sm:w-80 md:w-96 lg:w-[28rem] drop-shadow-2xl"
-                style={{ filter: "drop-shadow(0 0 42px rgba(217,70,239,0.42)) drop-shadow(0 0 22px rgba(255,45,85,0.26))" }}
+                style={{ filter: "drop-shadow(0 0 48px rgba(168,85,247,0.62)) drop-shadow(0 0 26px rgba(124,58,237,0.46))" }}
               />
             </div>
           </div>
