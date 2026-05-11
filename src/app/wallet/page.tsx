@@ -64,58 +64,9 @@ const statusConfig: Record<TxStatus, { color: string; icon: React.ReactNode }> =
 };
 
 /* ── Component ────────────────────────────────────────────────── */
-type PaymentMethod = "paypal" | "mercadopago";
-
-/**
- * Open a payment URL in a popup and resolve when either:
- * - the popup posts a message back to us via /payment-return, or
- * - the popup closes (cancellation).
- * Falls back to a full redirect if the popup is blocked.
- */
-function openPaymentPopup(url: string, expectedProvider: "mp" | "paypal"):
-  Promise<{ paymentId: string | null; status: string | null }> {
-  return new Promise((resolve) => {
-    const w = 480;
-    const h = 720;
-    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
-    const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
-    const popup = window.open(url, "phoenix-checkout", `width=${w},height=${h},left=${left},top=${top}`);
-    if (!popup) {
-      window.location.href = url;
-      return;
-    }
-
-    let settled = false;
-    const settle = (val: { paymentId: string | null; status: string | null }) => {
-      if (settled) return;
-      settled = true;
-      window.removeEventListener("message", listener);
-      window.clearInterval(interval);
-      resolve(val);
-    };
-
-    const listener = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data;
-      if (!data || data.source !== "phoenix-payment-return") return;
-      if (data.provider !== expectedProvider) return;
-      settle({
-        paymentId: typeof data.paymentId === "string" ? data.paymentId : null,
-        status: typeof data.status === "string" ? data.status : null,
-      });
-    };
-
-    const interval = window.setInterval(() => {
-      if (popup.closed) settle({ paymentId: null, status: null });
-    }, 600);
-
-    window.addEventListener("message", listener);
-  });
-}
 
 export default function WalletPage() {
   const [activeTab, setActiveTab] = useState<"depositar" | "retirar">("depositar");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mercadopago");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -195,51 +146,19 @@ export default function WalletPage() {
     setMessage(null);
 
     try {
-      if (paymentMethod === "paypal") {
-        const res = await fetch("/api/paypal/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: amt }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || "Error al crear la orden de PayPal");
-        }
-        const data = await res.json();
-        if (data.approvalUrl) {
-          window.location.href = data.approvalUrl;
-          return;
-        }
-        throw new Error("PayPal no devolvio URL de aprobacion");
-      }
-
-      // MercadoPago: create preference, open popup, wait for return, capture.
-      const prefRes = await fetch("/api/mercadopago/create-preference", {
+      const res = await fetch("/api/paypal/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, purpose: "wallet_topup" }),
+        body: JSON.stringify({ amount: amt }),
       });
-      if (!prefRes.ok) {
-        const err = await prefRes.json().catch(() => ({}));
-        throw new Error(err.error || "Error al crear orden de MercadoPago");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al crear la orden de PayPal");
       }
-      const { initPoint } = (await prefRes.json()) as { initPoint: string };
-      if (!initPoint) throw new Error("MercadoPago no devolvio URL de pago");
-
-      const result = await openPaymentPopup(initPoint, "mp");
-      if (!result.paymentId) throw new Error("Pago cancelado o no completado");
-
-      const captureRes = await fetch("/api/mercadopago/capture-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId: result.paymentId }),
-      });
-      const captureData = await captureRes.json().catch(() => ({}));
-      if (!captureRes.ok) throw new Error(captureData.error || "Error al confirmar el pago");
-      setMessage({ type: "success", text: `Deposito de $${(captureData.amountUsd ?? amt).toFixed(2)} exitoso` });
-      setSelectedAmount(null);
-      setCustomAmount("");
-      fetchWallet();
+      const data = await res.json();
+      if (!data.approvalUrl) throw new Error("PayPal no devolvio URL de aprobacion");
+      window.location.href = data.approvalUrl;
+      return;
     } catch (err) {
       setMessage({ type: "error", text: (err as Error).message || "Error de conexion" });
     }
@@ -360,50 +279,18 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Payment methods */}
+            {/* Payment method (PayPal only) */}
             <div>
               <p className="text-sm text-muted mb-3">Metodo de pago</p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("paypal")}
-                  className={`flex items-center gap-3 p-4 rounded-xl text-left transition-colors ${
-                    paymentMethod === "paypal"
-                      ? "bg-[#0070ba]/10 border border-[#0070ba]/40"
-                      : "bg-surface-2 border border-border hover:border-[#0070ba]/40"
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-lg bg-[#0070ba]/15 flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#0070ba"><path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 0 0-.794.68l-.04.22-.63 3.993-.032.17a.804.804 0 0 1-.794.679H8.044a.483.483 0 0 1-.477-.558L7.82 20.9l.164-1.035.015-.098a.804.804 0 0 1 .794-.68h.5c3.238 0 5.774-1.314 6.514-5.12.256-1.313.192-2.447-.3-3.327a2.74 2.74 0 0 0-.788-.837c.467.192.87.464 1.181.837l.167-.162zM17.167 5.5c-.467-.192-.984-.33-1.548-.415A11.453 11.453 0 0 0 13.5 4.92h-4.84a.805.805 0 0 0-.794.68L6.038 17.227a.579.579 0 0 0 .572.67h3.3l.828-5.247-.026.165a.805.805 0 0 1 .794-.68h1.654c3.238 0 5.774-1.314 6.514-5.12.219-1.126.106-2.066-.3-2.814a3.78 3.78 0 0 0-1.207-.701z"/></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">PayPal</p>
-                    <p className="text-xs text-muted">Tarjeta, saldo PayPal</p>
-                  </div>
-                  {paymentMethod === "paypal" && (
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success">Activo</span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("mercadopago")}
-                  className={`flex items-center gap-3 p-4 rounded-xl text-left transition-colors ${
-                    paymentMethod === "mercadopago"
-                      ? "bg-blue-500/10 border border-blue-500/40"
-                      : "bg-surface-2 border border-border hover:border-blue-500/40"
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <span className="text-blue-400 text-xs font-bold">MP</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">MercadoPago</p>
-                    <p className="text-xs text-muted">OXXO, SPEI, tarjeta (MXN)</p>
-                  </div>
-                  {paymentMethod === "mercadopago" && (
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success">Activo</span>
-                  )}
-                </button>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-[#0070ba]/10 border border-[#0070ba]/40">
+                <div className="w-10 h-10 rounded-lg bg-[#0070ba]/15 flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#0070ba"><path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 0 0-.794.68l-.04.22-.63 3.993-.032.17a.804.804 0 0 1-.794.679H8.044a.483.483 0 0 1-.477-.558L7.82 20.9l.164-1.035.015-.098a.804.804 0 0 1 .794-.68h.5c3.238 0 5.774-1.314 6.514-5.12.256-1.313.192-2.447-.3-3.327a2.74 2.74 0 0 0-.788-.837c.467.192.87.464 1.181.837l.167-.162zM17.167 5.5c-.467-.192-.984-.33-1.548-.415A11.453 11.453 0 0 0 13.5 4.92h-4.84a.805.805 0 0 0-.794.68L6.038 17.227a.579.579 0 0 0 .572.67h3.3l.828-5.247-.026.165a.805.805 0 0 1 .794-.68h1.654c3.238 0 5.774-1.314 6.514-5.12.219-1.126.106-2.066-.3-2.814a3.78 3.78 0 0 0-1.207-.701z"/></svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">PayPal</p>
+                  <p className="text-xs text-muted">Tarjeta o saldo PayPal</p>
+                </div>
+                <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/15 text-success">Activo</span>
               </div>
             </div>
 
@@ -428,9 +315,7 @@ export default function WalletPage() {
               disabled={depositLoading || (!selectedAmount && !customAmount)}
               className="w-full py-3.5 bg-gradient-main text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
             >
-              {depositLoading
-                ? "Procesando..."
-                : `Depositar con ${paymentMethod === "paypal" ? "PayPal" : "MercadoPago"}`}
+              {depositLoading ? "Procesando..." : "Depositar con PayPal"}
             </button>
           </div>
         ) : (

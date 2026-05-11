@@ -227,7 +227,7 @@ function TournamentCard({
   walletBalance: number | null;
   onChange: () => Promise<void>;
 }) {
-  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal" | "mercadopago">(null);
+  const [busy, setBusy] = useState<null | "join" | "leave" | "paypal">(null);
   const [error, setError] = useState<string | null>(null);
 
   const pct = t.maxSlots > 0 ? Math.round((t.filledSlots / t.maxSlots) * 100) : 0;
@@ -299,43 +299,6 @@ function TournamentCard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId }),
-      });
-      const joinData = await joinRes.json().catch(() => ({}));
-      if (!joinRes.ok) throw new Error(joinData.error || "El pago no se completo");
-      await onChange();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }, [t.id, t.entryFee, balance, onChange]);
-
-  const handleMercadoPagoJoin = useCallback(async () => {
-    setBusy("mercadopago");
-    setError(null);
-    try {
-      const topUp = Math.max(t.entryFee - balance, 1);
-      const prefRes = await fetch("/api/mercadopago/create-preference", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Number(topUp.toFixed(2)),
-          purpose: "tournament_join",
-          tournamentId: t.id,
-        }),
-      });
-      const prefData = await prefRes.json().catch(() => ({}));
-      if (!prefRes.ok) throw new Error(prefData.error || "Error al crear orden de MercadoPago");
-      const { initPoint } = prefData as { initPoint: string };
-      if (!initPoint) throw new Error("MercadoPago no devolvio URL de pago");
-
-      const result = await openPaymentPopup(initPoint, "mp");
-      if (!result.paymentId) throw new Error("Pago cancelado o no completado");
-
-      const joinRes = await fetch(`/api/tournaments/${t.id}/mercadopago-join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId: result.paymentId }),
       });
       const joinData = await joinRes.json().catch(() => ({}));
       if (!joinRes.ok) throw new Error(joinData.error || "El pago no se completo");
@@ -446,13 +409,6 @@ function TournamentCard({
             className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-main text-white hover:opacity-90 disabled:opacity-50"
           >
             {busy === "paypal" ? "Procesando..." : `Pagar con PayPal ($${t.entryFee.toFixed(2)})`}
-          </button>
-          <button
-            onClick={handleMercadoPagoJoin}
-            disabled={busy !== null}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 transition-colors"
-          >
-            {busy === "mercadopago" ? "Procesando..." : `Pagar con MercadoPago ($${t.entryFee.toFixed(2)})`}
           </button>
         </div>
       ) : (
