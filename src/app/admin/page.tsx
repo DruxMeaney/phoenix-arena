@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, type ReactNode } from "react";
+import Link from "next/link";
 import AdminPasswordGate from "./components/AdminPasswordGate";
 import AdminDashboard from "./components/AdminDashboard";
 import AdminTournaments from "./components/AdminTournaments";
@@ -11,6 +12,14 @@ import AdminTransactions from "./components/AdminTransactions";
 import AdminActivity from "./components/AdminActivity";
 
 type Section = "dashboard" | "torneos" | "retos" | "tienda" | "usuarios" | "disputas" | "transacciones" | "actividad";
+
+type SectionHelp = {
+  purpose: string;
+  checks: string[];
+  risk: string;
+  assistantTitle: string;
+  assistantBody: string;
+};
 
 const SECTIONS: { key: Section; label: string; icon: ReactNode }[] = [
   {
@@ -87,6 +96,125 @@ const SECTIONS: { key: Section; label: string; icon: ReactNode }[] = [
   },
 ];
 
+const SECTION_HELP: Record<Section, SectionHelp> = {
+  dashboard: {
+    purpose: "Vista ejecutiva para detectar salud operativa: volumen, usuarios activos, disputas y actividad de la semana.",
+    checks: [
+      "Confirma si hay picos de partidas o disputas antes de intervenir otras secciones.",
+      "Usa el volumen semanal para entender si la actividad monetaria crece o se estanca.",
+      "Si hay disputas pendientes, atiéndelas antes de cerrar torneos o liberar pagos.",
+    ],
+    risk: "No es una sección para editar; úsala como tablero de diagnóstico antes de actuar.",
+    assistantTitle: "Lee primero la salud general",
+    assistantBody: "El dashboard funciona como semáforo: si algo se ve fuera de rango, entra a la sección específica para auditarlo.",
+  },
+  torneos: {
+    purpose: "Crear, revisar, cancelar y capturar resultados de torneos. Esta sección alimenta premios, historial y PSR.",
+    checks: [
+      "Antes de publicar, valida nombre, juego, cupos, entrada, premio y fecha.",
+      "Al capturar resultados, revisa placement, kills, puntos y evidencia.",
+      "Cancelar un torneo debe ser excepcional y con razón clara para soporte.",
+    ],
+    risk: "Los resultados de torneo pueden modificar ranking, reputación y premios; revisa dos veces antes de guardar.",
+    assistantTitle: "Torneos impactan ranking y dinero",
+    assistantBody: "Aquí conviene trabajar con evidencia a la vista. Si vas a registrar resultados, asegúrate de que el torneo y la versión de captura sean correctos.",
+  },
+  retos: {
+    purpose: "Supervisar partidas o retos entre jugadores: estado, aceptación, reporte y resolución básica.",
+    checks: [
+      "Revisa qué retos siguen pendientes o en progreso demasiado tiempo.",
+      "Contrasta resultado reportado con evidencia antes de resolver.",
+      "Observa si un usuario acumula patrones extraños de abandonos o disputas.",
+    ],
+    risk: "Un cambio incorrecto puede asignar victorias o liberar fondos al jugador equivocado.",
+    assistantTitle: "Resuelve retos con evidencia",
+    assistantBody: "No te bases solo en el texto del reporte. Busca consistencia entre usuarios, monto, estado y prueba enviada.",
+  },
+  tienda: {
+    purpose: "Administrar artículos de tienda, precios, disponibilidad y recompensas visibles para usuarios.",
+    checks: [
+      "Confirma que cada artículo tenga nombre, precio y estado claros.",
+      "Evita publicar recompensas ambiguas o beneficios que no estén implementados.",
+      "Desactiva productos antes de borrarlos si ya tuvieron compras.",
+    ],
+    risk: "Un precio o beneficio mal descrito puede crear reclamaciones de usuarios.",
+    assistantTitle: "La tienda debe prometer solo lo real",
+    assistantBody: "Antes de activar un producto, piensa como usuario: qué compro, cuánto cuesta y qué recibo exactamente.",
+  },
+  usuarios: {
+    purpose: "Buscar jugadores, revisar historial, wallet, roles, actividad, torneos y señales de riesgo.",
+    checks: [
+      "Usa búsqueda para ubicar usuario por nombre, correo o identificador visible.",
+      "Revisa historial competitivo antes de modificar rol o confianza.",
+      "Observa wallet, transacciones y disputas si hay sospecha de abuso.",
+    ],
+    risk: "Cambiar roles o datos de usuario altera permisos y confianza; deja trazabilidad interna.",
+    assistantTitle: "Audita al jugador completo",
+    assistantBody: "No mires un dato aislado. Combina actividad, resultados, wallet y disputas para entender el caso.",
+  },
+  disputas: {
+    purpose: "Resolver desacuerdos con evidencia, proteger fair play y evitar pagos injustos.",
+    checks: [
+      "Lee ambas versiones antes de resolver.",
+      "Prioriza evidencia verificable: captura, clip, timestamp y reglas del reto.",
+      "Documenta la razón de resolución para que soporte pueda defenderla.",
+    ],
+    risk: "Es la sección más sensible: una resolución débil afecta confianza, dinero y reputación.",
+    assistantTitle: "Disputas requieren método",
+    assistantBody: "Trabaja como auditor: evidencia primero, reglas después, decisión al final. Si falta evidencia, no improvises.",
+  },
+  transacciones: {
+    purpose: "Monitorear movimientos de dinero, depósitos, retiros, premios y posibles anomalías.",
+    checks: [
+      "Verifica monto, usuario, estado y fecha antes de interpretar un movimiento.",
+      "Busca duplicados, fallos de pasarela o transacciones sin correlato en wallet.",
+      "Cruza pagos con torneos, retos y disputas cuando haya reclamos.",
+    ],
+    risk: "Nunca ajustes dinero sin evidencia externa y registro interno de la razón.",
+    assistantTitle: "Dinero exige trazabilidad",
+    assistantBody: "Cada movimiento debe poder explicarse. Si no sabes por qué existe una transacción, investiga antes de modificar.",
+  },
+  actividad: {
+    purpose: "Revisar eventos recientes del sistema para detectar comportamiento anómalo o cambios administrativos.",
+    checks: [
+      "Busca secuencias raras: muchos intentos, cambios repetidos o acciones fuera de horario.",
+      "Úsala para reconstruir qué pasó antes de una disputa o reclamo.",
+      "Combina actividad con usuarios y transacciones para cerrar auditorías.",
+    ],
+    risk: "La actividad no siempre prueba intención; úsala como pista, no como sentencia aislada.",
+    assistantTitle: "Reconstruye la historia",
+    assistantBody: "Esta sección es tu línea de tiempo. Sirve para conectar síntomas, acciones y consecuencias.",
+  },
+};
+
+function AdminSectionIntro({ section }: { section: Section }) {
+  const help = SECTION_HELP[section];
+
+  return (
+    <section className="mb-6 grid gap-4 2xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="neon-panel-cyan rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur-xl">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Para qué sirve</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{help.purpose}</p>
+        <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
+          <p className="text-xs font-semibold text-cyan-200">Criterio operativo</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">{help.risk}</p>
+        </div>
+      </div>
+      <div className="neon-panel-fuchsia rounded-2xl border border-border bg-surface/80 p-5 backdrop-blur-xl">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-fuchsia-300">Qué revisar aquí</p>
+        <ul className="mt-3 space-y-2">
+          {help.checks.map((check) => (
+            <li key={check} className="flex gap-2 text-xs leading-relaxed text-muted">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.75)]" />
+              <span>{check}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [section, setSection] = useState<Section>("dashboard");
@@ -98,19 +226,38 @@ export default function AdminPage() {
     }
   }, []);
 
-  if (!authenticated) {
-    return <AdminPasswordGate onSuccess={() => setAuthenticated(true)} />;
-  }
-
   const handleLogout = () => {
     sessionStorage.removeItem("phoenix_admin_pass");
     setAuthenticated(false);
   };
 
+  useEffect(() => {
+    if (!authenticated) return;
+    const activeSection = SECTIONS.find((s) => s.key === section);
+    const help = SECTION_HELP[section];
+    window.dispatchEvent(new CustomEvent("phoenix:guide", {
+      detail: {
+        eyebrow: `Admin: ${activeSection?.label ?? "Panel"}`,
+        title: help.assistantTitle,
+        body: help.assistantBody,
+        steps: help.checks,
+        primaryHref: "/",
+        primaryLabel: "Regresar a Phoenix",
+      },
+    }));
+  }, [authenticated, section]);
+
+  const activeSection = SECTIONS.find((s) => s.key === section);
+  const activeHelp = SECTION_HELP[section];
+
+  if (!authenticated) {
+    return <AdminPasswordGate onSuccess={() => setAuthenticated(true)} />;
+  }
+
   return (
-    <div className="min-h-screen bg-[#08080f] flex">
+    <div className="fixed inset-0 z-40 flex overflow-hidden bg-[#070711] text-foreground">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-surface/50 backdrop-blur-xl fixed inset-y-0 left-0 z-30">
+      <aside className="hidden lg:flex flex-col w-72 border-r border-border bg-surface/70 backdrop-blur-xl fixed inset-y-0 left-0 z-30">
         {/* Header */}
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
@@ -122,9 +269,18 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-sm font-bold text-foreground">Phoenix Admin</h1>
-              <p className="text-[10px] text-muted">Panel de Control</p>
+              <p className="text-[10px] text-muted">Consola aislada</p>
             </div>
           </div>
+          <Link
+            href="/"
+            className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-100 transition-colors hover:border-red-300/70 hover:bg-red-500/20"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+            Regresar a Phoenix
+          </Link>
         </div>
 
         {/* Navigation */}
@@ -208,20 +364,41 @@ export default function AdminPage() {
               </svg>
               Cerrar Sesion
             </button>
+            <Link
+              href="/"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-400/35 bg-red-500/10 px-3 py-2.5 text-sm font-semibold text-red-100"
+            >
+              Regresar a Phoenix
+            </Link>
           </div>
         )}
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-screen lg:ml-64 pt-14 lg:pt-0">
-        <div className="p-4 sm:p-6 lg:p-8">
+      <main className="h-dvh min-h-dvh flex-1 overflow-y-auto pt-14 lg:ml-72 lg:pt-0">
+        <div className="p-4 sm:p-6 lg:p-8 xl:pr-[22rem] 2xl:pr-[23rem]">
           {/* Section Header */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-foreground">
-              {SECTIONS.find((s) => s.key === section)?.label}
-            </h2>
-            <div className="mt-1 h-0.5 w-12 bg-gradient-to-r from-red-600 to-transparent rounded-full" />
+          <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-red-300">Panel administrativo</p>
+              <h2 className="mt-2 text-2xl font-bold text-foreground sm:text-3xl">
+                {activeSection?.label}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{activeHelp.purpose}</p>
+              <div className="mt-3 h-0.5 w-16 rounded-full bg-gradient-to-r from-red-500 via-fuchsia-400 to-transparent" />
+            </div>
+            <Link
+              href="/"
+              className="hidden shrink-0 items-center gap-2 rounded-xl border border-border bg-surface/70 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-red-400/50 hover:bg-red-500/10 xl:inline-flex"
+            >
+              <svg className="h-4 w-4 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+              </svg>
+              Regresar a Phoenix
+            </Link>
           </div>
+
+          <AdminSectionIntro section={section} />
 
           {/* Section Content */}
           {section === "dashboard" && <AdminDashboard />}

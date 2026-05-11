@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function AdminPasswordGate({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState("");
@@ -59,6 +60,13 @@ export default function AdminPasswordGate({ onSuccess }: { onSuccess: () => void
             Acceder
           </button>
         </form>
+
+        <Link
+          href="/"
+          className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-muted transition-colors hover:border-red-400/50 hover:text-foreground"
+        >
+          Regresar a Phoenix
+        </Link>
       </div>
 
       <style jsx>{`
