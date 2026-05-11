@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "legacy:extract": "python3 scripts/extract_legacy_psr.py --source ../00_old --output data/legacy-psr/legacy-import.json",
+    "seed:legacy-psr": "npx tsx prisma/seed-legacy-psr.ts",
     "seed:psr-demo": "npx tsx prisma/seed-psr-demo.ts"
   },
   "dependencies": {

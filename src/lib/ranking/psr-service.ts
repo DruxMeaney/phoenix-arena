@@ -5,6 +5,7 @@ import {
   computePsrLeaderboard,
   hashRankingPayload,
   type PsrEvent,
+  type PsrEventEntry,
   type PsrLeaderboardRow,
   type PsrPlayerInput,
 } from "@/lib/scoring";
@@ -27,16 +28,46 @@ export interface PsrRankingSnapshot {
   loadError: string | null;
 }
 
+const QUERY_CHUNK_SIZE = 500;
+
 type UserWithRecords = Awaited<ReturnType<typeof fetchUsersForPsr>>[number];
 type MatchRecord = UserWithRecords["matchRecords"][number];
 
+function chunkList<T>(items: T[], size = QUERY_CHUNK_SIZE): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 async function fetchUsersForPsr() {
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: { status: "active" },
-    include: {
-      matchRecords: { orderBy: { date: "asc" } },
-    },
+    orderBy: { username: "asc" },
   });
+  if (users.length === 0) return [];
+
+  const recordsByPlayer = new Map<
+    string,
+    Awaited<ReturnType<typeof prisma.rankingMatchRecord.findMany>>
+  >();
+  for (const idChunk of chunkList(users.map((user) => user.id))) {
+    const records = await prisma.rankingMatchRecord.findMany({
+      where: { playerId: { in: idChunk } },
+      orderBy: { date: "asc" },
+    });
+    for (const record of records) {
+      const current = recordsByPlayer.get(record.playerId) ?? [];
+      current.push(record);
+      recordsByPlayer.set(record.playerId, current);
+    }
+  }
+
+  return users.map((user) => ({
+    ...user,
+    matchRecords: recordsByPlayer.get(user.id) ?? [],
+  }));
 }
 
 function toPlayers(users: UserWithRecords[]): PsrPlayerInput[] {
@@ -85,6 +116,29 @@ function recordToEventEntry(record: MatchRecord, user: UserWithRecords) {
   };
 }
 
+function isBetterCompetitiveEntry(candidate: PsrEventEntry, current: PsrEventEntry): boolean {
+  const candidateSkill = candidate.skillPoints ?? candidate.teamPoints;
+  const currentSkill = current.skillPoints ?? current.teamPoints;
+  if (candidateSkill !== currentSkill) return candidateSkill > currentSkill;
+  if (candidate.kills !== current.kills) return candidate.kills > current.kills;
+  return candidate.placement < current.placement;
+}
+
+function dedupeEventEntries(event: PsrEvent): PsrEvent {
+  if (event.entries.length <= 1) return event;
+
+  const entriesByPlayer = new Map<string, PsrEventEntry>();
+  for (const entry of event.entries) {
+    const current = entriesByPlayer.get(entry.playerId);
+    if (!current || isBetterCompetitiveEntry(entry, current)) {
+      entriesByPlayer.set(entry.playerId, entry);
+    }
+  }
+
+  if (entriesByPlayer.size === event.entries.length) return event;
+  return { ...event, entries: [...entriesByPlayer.values()] };
+}
+
 function buildPsrEvents(users: UserWithRecords[]): PsrEvent[] {
   const grouped = new Map<string, PsrEvent>();
 
@@ -126,7 +180,7 @@ function buildPsrEvents(users: UserWithRecords[]): PsrEvent[] {
     }
   }
 
-  return [...grouped.values()].sort(
+  return [...grouped.values()].map(dedupeEventEntries).sort(
     (a, b) => a.occurredAt.getTime() - b.occurredAt.getTime()
   );
 }
@@ -346,8 +400,9 @@ export async function rebuildAndPersistPsrRankings(
     });
   }
 
+  const usersById = new Map(users.map((user) => [user.id, user]));
   for (const row of computation.leaderboard) {
-    const user = users.find((candidate) => candidate.id === row.playerId);
+    const user = usersById.get(row.playerId);
     await prisma.user.update({
       where: { id: row.playerId },
       data: {
@@ -366,25 +421,26 @@ export async function rebuildAndPersistPsrRankings(
   }
 
   if (computation.leaderboard.length > 0) {
-    await prisma.rankingSnapshot.createMany({
-      data: computation.leaderboard.map((row) => ({
-        playerId: row.playerId,
-        modelVersion: PSR_MODEL_VERSION,
-        seasonId: "global",
-        rank: row.rank,
-        tier: row.tier,
-        mu: row.mu,
-        sigma: row.sigma,
-        psr: row.scoreFinal,
-        percentile: row.percentil,
-        matchesPlayed: row.participaciones,
-        isCalibrating: row.isCalibrating,
-        isDecaying: row.isDecaying,
-        decayMultiplier: row.decayMultiplier,
-        sourceHash,
-        snapshotAt,
-      })),
-    });
+    const snapshotRows = computation.leaderboard.map((row) => ({
+      playerId: row.playerId,
+      modelVersion: PSR_MODEL_VERSION,
+      seasonId: "global",
+      rank: row.rank,
+      tier: row.tier,
+      mu: row.mu,
+      sigma: row.sigma,
+      psr: row.scoreFinal,
+      percentile: row.percentil,
+      matchesPlayed: row.participaciones,
+      isCalibrating: row.isCalibrating,
+      isDecaying: row.isDecaying,
+      decayMultiplier: row.decayMultiplier,
+      sourceHash,
+      snapshotAt,
+    }));
+    for (const snapshotChunk of chunkList(snapshotRows)) {
+      await prisma.rankingSnapshot.createMany({ data: snapshotChunk });
+    }
   }
 
   const deltas = computation.eventResults.reduce(

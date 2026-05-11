@@ -295,7 +295,18 @@ La captura manual de torneos ya integra el esquema `psr-legacy-v1`:
 - `rawPoints` y `matchpointBonus` guardan el total historico bruto para auditoria.
 - Al guardar un torneo se reconstruye PSR con `rebuildAndPersistPsrRankings()`.
 
-Lo pendiente para una importacion masiva de `00_old` sigue siendo construir un parser reproducible y una pantalla de revision de aliases.
+La importacion masiva de `00_old` ya cuenta con pipeline reproducible:
+
+- extractor: `scripts/extract_legacy_psr.py`;
+- staging auditable: `data/legacy-psr/legacy-import.json`;
+- seed Prisma: `prisma/seed-legacy-psr.ts`;
+- source type: `legacy_excel`;
+- identidad tecnica: `legacy+<handle>.<hash>@phoenix.local`.
+
+El primer corte operativo recupero 156 eventos importables, 8,337
+participaciones y 2,843 jugadores unicos. Sigue pendiente una pantalla admin de
+revision de aliases para convertir identidades historicas provisionales en
+cuentas definitivas verificadas.
 
 ### Pesos recomendados por tipo de evento
 
@@ -336,9 +347,9 @@ Por eso la estrategia correcta es:
 
 ## Proxima fase tecnica recomendada
 
-1. Crear parser reproducible para `00_old`.
-2. Generar JSON/CSV normalizado de staging.
-3. Crear reporte de calidad: eventos importables, eventos sospechosos, eventos excluidos.
-4. Crear tabla de aliases y pantalla admin de revision.
-5. Correr backtest PSR con historico.
+1. Crear tabla de aliases y pantalla admin de revision.
+2. Crear reporte visual de calidad: eventos importables, eventos sospechosos y eventos excluidos.
+3. Conectar una ingesta semiautomatica de CSV/Excel para nuevos torneos.
+4. Evaluar API/export autorizado de servidor para capturar partidas automaticamente.
+5. Correr backtest PSR con historico ya importado.
 6. Publicar una `model card` de `psr-0.2-legacy-shadow`.
