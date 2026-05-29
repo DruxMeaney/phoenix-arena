@@ -62,7 +62,7 @@ function LineChart({
   const delta = latest !== undefined && first !== undefined ? latest - first : 0;
 
   return (
-    <div className="rounded-lg border border-border bg-surface/40 p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{metricLabels[metric]}</p>
@@ -91,7 +91,7 @@ function Histogram({ title, bins }: { title: string; bins: HistoryBin[] }) {
   const max = Math.max(1, ...bins.map((bin) => bin.count));
 
   return (
-    <div className="rounded-lg border border-border bg-surface/40 p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">{title}</p>
       <div className="flex h-32 items-end gap-2">
         {bins.map((bin) => (
@@ -113,7 +113,7 @@ function Histogram({ title, bins }: { title: string; bins: HistoryBin[] }) {
 
 function StatTile({ label, value, tone = "text-foreground" }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface/40 p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <p className={`text-xl font-bold ${tone}`}>{value}</p>
       <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">{label}</p>
     </div>
@@ -123,7 +123,7 @@ function StatTile({ label, value, tone = "text-foreground" }: { label: string; v
 export default function PlayerPsrHistoryView({ history, compact = false }: PlayerPsrHistoryProps) {
   if (!history || history.events.length === 0) {
     return (
-      <section className="rounded-xl border border-border bg-surface/40 p-6">
+      <section className="rounded-xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">Historial PSR</h3>
@@ -148,13 +148,13 @@ export default function PlayerPsrHistoryView({ history, compact = false }: Playe
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-border bg-surface/50 px-3 py-1 text-muted">
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-muted">
             Modelo {history.current.modelVersion}
           </span>
-          <span className="rounded-full border border-border bg-surface/50 px-3 py-1 text-muted">
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-muted">
             Rank {history.current.rank ?? "--"}
           </span>
-          <span className="rounded-full border border-border bg-surface/50 px-3 py-1 text-muted">
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-muted">
             Percentil {history.current.percentile ?? "--"}
           </span>
         </div>
@@ -194,7 +194,7 @@ export default function PlayerPsrHistoryView({ history, compact = false }: Playe
         <StatTile label="Matchpoint wins" value={String(history.summary.matchpointWins)} />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface/40">
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <p className="text-sm font-bold text-foreground">Eventos que explican el rating</p>
           <p className="text-xs text-muted">Ultimo evento: {latest ? formatDate(latest.date) : "--"}</p>

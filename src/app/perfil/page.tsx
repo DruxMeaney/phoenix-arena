@@ -235,7 +235,7 @@ export default function PerfilPage() {
 
         {/* ── Bio ─────────────────────────────────────────────── */}
         {profile.bio && (
-          <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-5 mb-6`}>
+          <div className={`bg-surface border ${theme.border} rounded-2xl p-5 mb-6`}>
             <p className="text-sm text-foreground/90 leading-relaxed">{profile.bio}</p>
           </div>
         )}
@@ -249,7 +249,7 @@ export default function PerfilPage() {
             { label: "Saldo", value: `$${profile.balance.toFixed(2)}`, color: "text-success" },
             { label: "Nivel", value: `${Math.floor(profile.xp / 100)}`, color: "text-purple-400" },
           ].map((s) => (
-            <div key={s.label} className="bg-surface/40 backdrop-blur-sm rounded-xl p-4 text-center transition-all hover:scale-105" style={{ border: `1px solid ${theme.accent}30`, boxShadow: `0 0 20px ${theme.accent}15, inset 0 0 30px ${theme.accent}05` }}>
+            <div key={s.label} className="bg-surface rounded-xl p-4 text-center transition-all hover:scale-105" style={{ border: `1px solid ${theme.accent}30`, boxShadow: `0 0 20px ${theme.accent}15, inset 0 0 30px ${theme.accent}05` }}>
               <p className={`text-xl font-bold ${s.color}`} style={{ textShadow: `0 0 15px currentColor` }}>{s.value}</p>
               <p className="text-[10px] text-muted uppercase tracking-wider mt-1">{s.label}</p>
             </div>
@@ -260,19 +260,19 @@ export default function PerfilPage() {
         {(profile.socialTwitter || profile.socialYoutube || profile.socialTwitch) && (
           <div className="flex gap-3 mb-8">
             {profile.socialTwitter && (
-              <a href={`https://x.com/${profile.socialTwitter}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-surface/50 border ${theme.border} text-xs font-medium ${theme.text} hover:${theme.bg} transition-colors`}>
+              <a href={`https://x.com/${profile.socialTwitter}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border ${theme.border} text-xs font-medium ${theme.text} hover:${theme.bg} transition-colors`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 @{profile.socialTwitter}
               </a>
             )}
             {profile.socialYoutube && (
-              <a href={`https://youtube.com/@${profile.socialYoutube}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-surface/50 border ${theme.border} text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors`}>
+              <a href={`https://youtube.com/@${profile.socialYoutube}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border ${theme.border} text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                 {profile.socialYoutube}
               </a>
             )}
             {profile.socialTwitch && (
-              <a href={`https://twitch.tv/${profile.socialTwitch}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-surface/50 border ${theme.border} text-xs font-medium text-purple-400 hover:bg-purple-500/10 transition-colors`}>
+              <a href={`https://twitch.tv/${profile.socialTwitch}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border ${theme.border} text-xs font-medium text-purple-400 hover:bg-purple-500/10 transition-colors`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
                 {profile.socialTwitch}
               </a>
@@ -284,12 +284,12 @@ export default function PerfilPage() {
         {(profile.favoriteGame || profile.favoriteWeapon) && (
           <div className="flex gap-3 mb-8">
             {profile.favoriteGame && (
-              <span className={`px-4 py-2 rounded-xl bg-surface/50 border ${theme.border} text-xs ${theme.text}`}>
+              <span className={`px-4 py-2 rounded-xl bg-surface border ${theme.border} text-xs ${theme.text}`}>
                 Juego: <span className="text-foreground font-medium">{profile.favoriteGame}</span>
               </span>
             )}
             {profile.favoriteWeapon && (
-              <span className={`px-4 py-2 rounded-xl bg-surface/50 border ${theme.border} text-xs ${theme.text}`}>
+              <span className={`px-4 py-2 rounded-xl bg-surface border ${theme.border} text-xs ${theme.text}`}>
                 Arma: <span className="text-foreground font-medium">{profile.favoriteWeapon}</span>
               </span>
             )}
@@ -297,7 +297,7 @@ export default function PerfilPage() {
         )}
 
         {/* ── Tabs ────────────────────────────────────────────── */}
-        <div className="flex gap-1 bg-surface/30 backdrop-blur-sm p-1.5 rounded-xl mb-8 w-fit" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 15px ${theme.accent}10` }}>
+        <div className="flex gap-1 bg-surface p-1.5 rounded-xl mb-8 w-fit" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 15px ${theme.accent}10` }}>
           {(["feed", "stats", "history", "edit"] as const).map((tab) => (
             <button
               key={tab}
@@ -323,7 +323,7 @@ export default function PerfilPage() {
         {activeTab === "feed" && (
           <div className="space-y-6">
             {/* New post composer */}
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-5`} style={{ boxShadow: `0 0 20px ${theme.accent}08` }}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-5`} style={{ boxShadow: `0 0 20px ${theme.accent}08` }}>
               <div className="flex gap-2 mb-3">
                 {postTypes.map((pt) => (
                   <button
@@ -358,14 +358,14 @@ export default function PerfilPage() {
 
             {/* Posts feed */}
             {profile.posts.length === 0 ? (
-              <div className={`bg-surface/30 border ${theme.border} rounded-2xl p-12 text-center`}>
+              <div className={`bg-surface border ${theme.border} rounded-2xl p-12 text-center`}>
                 <p className="text-muted text-sm">Tu muro esta vacio. Publica algo para que la comunidad te conozca.</p>
               </div>
             ) : (
               profile.posts.map((post) => {
                 const pt = postTypes.find((p) => p.value === post.postType);
                 return (
-                  <div key={post.id} className="bg-surface/40 backdrop-blur-sm rounded-2xl p-5 transition-all hover:scale-[1.01]" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 10px ${theme.accent}08, inset 0 1px 0 ${theme.accent}15` }}>
+                  <div key={post.id} className="bg-surface rounded-2xl p-5 transition-all hover:scale-[1.01]" style={{ border: `1px solid ${theme.accent}25`, boxShadow: `0 0 10px ${theme.accent}08, inset 0 1px 0 ${theme.accent}15` }}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         {profile.avatar ? (
@@ -398,7 +398,7 @@ export default function PerfilPage() {
         {/* ═══ STATS TAB ═══ */}
         {activeTab === "stats" && (
           <div className="space-y-6">
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-6`} style={{ boxShadow: `0 0 20px ${theme.accent}08` }}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-6`} style={{ boxShadow: `0 0 20px ${theme.accent}08` }}>
               <h3 className="font-semibold mb-4">Phoenix Score</h3>
               <div className="grid sm:grid-cols-3 gap-4 mb-6">
                 <div className="text-center">
@@ -421,7 +421,7 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-6`}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-6`}>
               <h3 className="font-semibold mb-2">Periodo de calibracion</h3>
               <p className="text-sm text-muted">Necesitas un minimo de 4 partidas competitivas para que tu clasificacion se estabilice.</p>
             </div>
@@ -437,7 +437,7 @@ export default function PerfilPage() {
         {activeTab === "edit" && (
           <div className="space-y-6">
             {/* Theme selector */}
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-6`}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-6`}>
               <h3 className="font-semibold mb-4">Tema del Perfil</h3>
               <div className="grid grid-cols-4 gap-3">
                 {Object.entries(themes).map(([key, t]) => (
@@ -458,30 +458,30 @@ export default function PerfilPage() {
             </div>
 
             {/* Personal info */}
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-6 space-y-4`}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-6 space-y-4`}>
               <h3 className="font-semibold">Informacion Personal</h3>
               <div>
                 <label className="text-xs text-muted uppercase tracking-wider">Bio</label>
-                <textarea value={editData.bio} onChange={(e) => setEditData({ ...editData, bio: e.target.value })} placeholder="Cuentale al mundo quien eres..." className={`w-full mt-1.5 bg-surface/50 border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none resize-none min-h-[80px]`} maxLength={200} />
+                <textarea value={editData.bio} onChange={(e) => setEditData({ ...editData, bio: e.target.value })} placeholder="Cuentale al mundo quien eres..." className={`w-full mt-1.5 bg-surface border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none resize-none min-h-[80px]`} maxLength={200} />
               </div>
               <div>
                 <label className="text-xs text-muted uppercase tracking-wider">Lema personal</label>
-                <input type="text" value={editData.motto} onChange={(e) => setEditData({ ...editData, motto: e.target.value })} placeholder="Tu frase de guerra" className={`w-full mt-1.5 bg-surface/50 border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} maxLength={60} />
+                <input type="text" value={editData.motto} onChange={(e) => setEditData({ ...editData, motto: e.target.value })} placeholder="Tu frase de guerra" className={`w-full mt-1.5 bg-surface border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} maxLength={60} />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-muted uppercase tracking-wider">Juego favorito</label>
-                  <input type="text" value={editData.favoriteGame} onChange={(e) => setEditData({ ...editData, favoriteGame: e.target.value })} placeholder="Warzone, Fortnite..." className={`w-full mt-1.5 bg-surface/50 border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} />
+                  <input type="text" value={editData.favoriteGame} onChange={(e) => setEditData({ ...editData, favoriteGame: e.target.value })} placeholder="Warzone, Fortnite..." className={`w-full mt-1.5 bg-surface border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} />
                 </div>
                 <div>
                   <label className="text-xs text-muted uppercase tracking-wider">Arma favorita</label>
-                  <input type="text" value={editData.favoriteWeapon} onChange={(e) => setEditData({ ...editData, favoriteWeapon: e.target.value })} placeholder="M4, AK-47..." className={`w-full mt-1.5 bg-surface/50 border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} />
+                  <input type="text" value={editData.favoriteWeapon} onChange={(e) => setEditData({ ...editData, favoriteWeapon: e.target.value })} placeholder="M4, AK-47..." className={`w-full mt-1.5 bg-surface border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} />
                 </div>
               </div>
             </div>
 
             {/* Social links */}
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-6 space-y-4`}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-6 space-y-4`}>
               <h3 className="font-semibold">Redes Sociales</h3>
               {[
                 { key: "socialTwitter", label: "X / Twitter", placeholder: "@tunombre", prefix: "x.com/" },
@@ -497,7 +497,7 @@ export default function PerfilPage() {
                       value={editData[s.key as keyof typeof editData]}
                       onChange={(e) => setEditData({ ...editData, [s.key]: e.target.value })}
                       placeholder={s.placeholder}
-                      className={`flex-1 bg-surface/50 border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`}
+                      className={`flex-1 bg-surface border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`}
                     />
                   </div>
                 </div>
@@ -505,10 +505,10 @@ export default function PerfilPage() {
             </div>
 
             {/* Banner URL */}
-            <div className={`bg-surface/50 backdrop-blur-sm border ${theme.border} rounded-2xl p-6`}>
+            <div className={`bg-surface border ${theme.border} rounded-2xl p-6`}>
               <h3 className="font-semibold mb-3">Fondo del Perfil</h3>
               <p className="text-xs text-muted mb-3">Pega la URL de una imagen para usar como fondo de tu perfil, o dejalo vacio para usar el fondo por defecto.</p>
-              <input type="url" value={editData.banner} onChange={(e) => setEditData({ ...editData, banner: e.target.value })} placeholder="https://ejemplo.com/mi-fondo.jpg" className={`w-full bg-surface/50 border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} />
+              <input type="url" value={editData.banner} onChange={(e) => setEditData({ ...editData, banner: e.target.value })} placeholder="https://ejemplo.com/mi-fondo.jpg" className={`w-full bg-surface border ${theme.border} rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted/40 focus:outline-none`} />
             </div>
 
             {/* Save */}

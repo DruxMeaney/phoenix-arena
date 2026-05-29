@@ -80,7 +80,7 @@ export default function ComunidadPage() {
               </span>
               <span className="text-sm font-medium text-success">{onlineCount} en linea</span>
             </div>
-            <div className="flex gap-1 bg-surface/30 p-1 rounded-lg">
+            <div className="flex gap-1 bg-surface p-1 rounded-lg">
               <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${filter === "all" ? "bg-gradient-main text-white" : "text-muted hover:text-foreground"}`}>
                 Todos
               </button>
@@ -98,7 +98,7 @@ export default function ComunidadPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar jugador..."
-              className="w-full bg-surface/50 backdrop-blur-sm border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-surface border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function ComunidadPage() {
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-surface/50 border border-border rounded-2xl p-5 animate-pulse">
+              <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-full bg-surface-3" />
                   <div className="space-y-2 flex-1">
@@ -119,7 +119,7 @@ export default function ComunidadPage() {
             ))}
           </div>
         ) : users.length === 0 ? (
-          <div className="bg-surface/50 border border-border rounded-2xl p-16 text-center">
+          <div className="bg-surface border border-border rounded-2xl p-16 text-center">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted/30" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <h3 className="text-lg font-semibold mb-1">{search ? "Sin resultados" : "Comunidad vacia"}</h3>
             <p className="text-sm text-muted">{search ? `No se encontraron jugadores con "${search}"` : "Se el primero en unirte a Phoenix Arena"}</p>
@@ -130,7 +130,7 @@ export default function ComunidadPage() {
               <Link
                 key={user.id}
                 href={`/jugador/${user.id}`}
-                className="group bg-surface/40 backdrop-blur-sm border border-border rounded-2xl p-5 transition-all hover:scale-[1.02] hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10"
+                className="group bg-surface border border-border rounded-2xl p-5 transition-all hover:scale-[1.02] hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10"
               >
                 <div className="flex items-center gap-4">
                   {/* Avatar with online indicator */}

@@ -133,7 +133,7 @@ export default function JugadorPage() {
 
         {/* Bio */}
         {profile.bio && (
-          <div className="bg-surface/40 backdrop-blur-sm rounded-2xl p-5 mb-6" style={{ border: `1px solid ${theme.accent}20` }}>
+          <div className="bg-surface rounded-2xl p-5 mb-6" style={{ border: `1px solid ${theme.accent}20` }}>
             <p className="text-sm text-foreground/90 leading-relaxed">{profile.bio}</p>
           </div>
         )}
@@ -146,7 +146,7 @@ export default function JugadorPage() {
             { label: "PSR", value: profile.psrHistory ? profile.psrHistory.current.psr.toFixed(1) : "--" },
             { label: "Nivel", value: String(profile.level) },
           ].map((s) => (
-            <div key={s.label} className="bg-surface/40 backdrop-blur-sm rounded-xl p-4 text-center" style={{ border: `1px solid ${theme.accent}20`, boxShadow: `0 0 15px ${theme.accent}08` }}>
+            <div key={s.label} className="bg-surface rounded-xl p-4 text-center" style={{ border: `1px solid ${theme.accent}20`, boxShadow: `0 0 15px ${theme.accent}08` }}>
               <p className="text-lg font-bold" style={{ color: theme.accent }}>{s.value}</p>
               <p className="text-[10px] text-muted uppercase tracking-wider mt-1">{s.label}</p>
             </div>
@@ -159,10 +159,10 @@ export default function JugadorPage() {
 
         {/* Social + Game info */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {profile.favoriteGame && <span className="px-3 py-1.5 rounded-lg bg-surface/40 text-xs text-muted" style={{ border: `1px solid ${theme.accent}15` }}>Juego: <span className="text-foreground">{profile.favoriteGame}</span></span>}
-          {profile.favoriteWeapon && <span className="px-3 py-1.5 rounded-lg bg-surface/40 text-xs text-muted" style={{ border: `1px solid ${theme.accent}15` }}>Arma: <span className="text-foreground">{profile.favoriteWeapon}</span></span>}
-          {profile.socialTwitter && <a href={`https://x.com/${profile.socialTwitter}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface/40 text-xs text-blue-400 hover:bg-blue-500/10 transition-colors" style={{ border: `1px solid ${theme.accent}15` }}>@{profile.socialTwitter}</a>}
-          {profile.socialTwitch && <a href={`https://twitch.tv/${profile.socialTwitch}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface/40 text-xs text-purple-400 hover:bg-purple-500/10 transition-colors" style={{ border: `1px solid ${theme.accent}15` }}>{profile.socialTwitch}</a>}
+          {profile.favoriteGame && <span className="px-3 py-1.5 rounded-lg bg-surface text-xs text-muted" style={{ border: `1px solid ${theme.accent}15` }}>Juego: <span className="text-foreground">{profile.favoriteGame}</span></span>}
+          {profile.favoriteWeapon && <span className="px-3 py-1.5 rounded-lg bg-surface text-xs text-muted" style={{ border: `1px solid ${theme.accent}15` }}>Arma: <span className="text-foreground">{profile.favoriteWeapon}</span></span>}
+          {profile.socialTwitter && <a href={`https://x.com/${profile.socialTwitter}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface text-xs text-blue-400 hover:bg-blue-500/10 transition-colors" style={{ border: `1px solid ${theme.accent}15` }}>@{profile.socialTwitter}</a>}
+          {profile.socialTwitch && <a href={`https://twitch.tv/${profile.socialTwitch}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface text-xs text-purple-400 hover:bg-purple-500/10 transition-colors" style={{ border: `1px solid ${theme.accent}15` }}>{profile.socialTwitch}</a>}
         </div>
 
         {/* Posts */}
@@ -170,7 +170,7 @@ export default function JugadorPage() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted">Publicaciones</h3>
             {profile.profilePosts.map((post) => (
-              <div key={post.id} className="bg-surface/40 backdrop-blur-sm rounded-2xl p-5" style={{ border: `1px solid ${theme.accent}15` }}>
+              <div key={post.id} className="bg-surface rounded-2xl p-5" style={{ border: `1px solid ${theme.accent}15` }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] uppercase tracking-wider" style={{ color: theme.accent }}>{post.postType}</span>
                   <span className="text-xs text-muted">{timeAgo(post.createdAt)}</span>

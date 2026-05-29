@@ -122,7 +122,7 @@ export default function CompetirPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-surface/30 backdrop-blur-sm p-1 rounded-xl border border-border w-fit">
+        <div className="flex gap-1 bg-surface p-1 rounded-xl border border-border w-fit">
           {([
             { key: "retos" as Tab, label: "Retos Abiertos" },
             { key: "rapida" as Tab, label: "Partida Rapida" },
@@ -153,7 +153,7 @@ export default function CompetirPage() {
 
             {/* Challenge list */}
             {filtered.length === 0 ? (
-              <div className="bg-surface/50 border border-border rounded-2xl p-12 text-center">
+              <div className="bg-surface border border-border rounded-2xl p-12 text-center">
                 <h3 className="font-semibold mb-1">Sin retos disponibles</h3>
                 <p className="text-sm text-muted mb-4">Se el primero en crear un reto</p>
                 <button onClick={() => setTab("crear")} className="px-6 py-2.5 rounded-xl bg-gradient-main text-white text-sm font-medium">Crear Reto</button>
@@ -161,7 +161,7 @@ export default function CompetirPage() {
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map((c) => (
-                  <div key={c.id} className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-5 flex flex-col card-hover">
+                  <div key={c.id} className="bg-surface border border-border rounded-2xl p-5 flex flex-col card-hover">
                     {/* Status + time */}
                     <div className="flex items-center justify-between mb-3">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${c.status === "open" ? "bg-success/15 text-success border border-success/30" : "bg-warning/15 text-warning border border-warning/30"}`}>
@@ -211,7 +211,7 @@ export default function CompetirPage() {
               <h2 className="text-xl font-bold">Partida Rapida</h2>
               <p className="text-sm text-muted mt-1">1v1 instantaneo contra un rival de tu nivel</p>
             </div>
-            <div className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6 space-y-5">
+            <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
               <div>
                 <label className="text-xs font-medium text-muted uppercase tracking-wider">Monto</label>
                 <div className="grid grid-cols-4 gap-3 mt-2">
@@ -241,7 +241,7 @@ export default function CompetirPage() {
         {/* ═══ CREAR RETO TAB ═══ */}
         {tab === "crear" && (
           <div className="max-w-lg mx-auto">
-            <div className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6 space-y-5">
+            <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
               <h2 className="text-lg font-semibold">Crear nuevo reto</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>

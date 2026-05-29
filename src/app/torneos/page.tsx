@@ -559,7 +559,7 @@ export default function TorneosPage() {
               <p className="text-sm text-muted mt-1">Emparejamiento 1v1 instantaneo contra un rival de tu nivel</p>
             </div>
 
-            <div className="bg-surface/40 backdrop-blur-sm border border-border rounded-2xl p-6 space-y-5">
+            <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
               <div>
                 <label className="text-xs font-medium text-muted uppercase tracking-wider">Monto</label>
                 <div className="grid grid-cols-4 gap-3 mt-2">
