@@ -294,223 +294,150 @@ function tierBadge(tier: string) {
 export default function Home() {
   return (
     <div className="flex flex-col">
-      {/* ════════ HERO — Minimal, Phoenix-centered ════════ */}
-      <section className="relative overflow-hidden min-h-[100dvh] flex flex-col items-center justify-center">
-        {/* Background glows */}
+      {/* ════════ HERO ════════ */}
+      <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24">
         <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/3 h-[600px] w-[600px] rounded-full bg-purple-500/18 blur-[150px] sm:h-[800px] sm:w-[800px]" />
-        <div className="pointer-events-none absolute right-0 top-24 h-[360px] w-[42vw] rounded-full bg-cyan-400/[.08] blur-[110px]" />
-        <div className="pointer-events-none absolute left-1/2 bottom-0 h-[400px] w-[90vw] -translate-x-1/2 rounded-full bg-red-600/[.08] blur-[100px]" />
 
-        <div className="relative text-center px-4 sm:px-6 animate-fade-up">
-          {/* Giant Logo */}
-          <div className="mb-8 flex justify-center">
-            <div className="relative">
-              {/* Purple aura behind logo */}
-              <div className="absolute inset-0 scale-125 rounded-full bg-purple-500/40 blur-[68px]" />
-              <div className="absolute inset-0 scale-110 rounded-full bg-violet-600/38 blur-[38px]" />
-              <img
-                src="/logo-color.png"
-                alt="Phoenix Arena"
-                className="relative w-64 sm:w-80 md:w-96 lg:w-[28rem] drop-shadow-2xl"
-                style={{ filter: "drop-shadow(0 0 48px rgba(168,85,247,0.62)) drop-shadow(0 0 26px rgba(124,58,237,0.46))" }}
-              />
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+            {/* Left: text */}
+            <div className="flex-1 text-center lg:text-left animate-fade-up">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+                Compite por premios reales en <span className="text-gradient">Warzone</span>
+              </h1>
+              <p className="mt-5 text-muted leading-relaxed max-w-lg mx-auto lg:mx-0">
+                Torneos, retos 1v1 y ranking profesional para jugadores de LATAM. Demuestra tu habilidad y gana.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
+                <Link href="/registro" className="bg-gradient-main text-white rounded-xl px-8 py-3.5 font-bold text-base hover:scale-105 transition-transform">
+                  Registrarse Gratis
+                </Link>
+                <Link href="/competir" className="border border-border-light rounded-xl px-8 py-3.5 font-semibold text-base text-foreground hover:bg-surface-2 transition-colors">
+                  Ver Retos
+                </Link>
+              </div>
+            </div>
+            {/* Right: logo */}
+            <div className="shrink-0 animate-fade-up" style={{ animationDelay: ".15s" }}>
+              <div className="relative">
+                <div className="absolute inset-0 scale-125 rounded-full bg-purple-500/30 blur-[60px]" />
+                <img src="/logo-color.png" alt="Phoenix Arena" className="relative w-52 sm:w-64 lg:w-72 drop-shadow-2xl" style={{ filter: "drop-shadow(0 0 40px rgba(168,85,247,0.5))" }} />
+              </div>
             </div>
           </div>
-
-          {/* Tagline — clean and short */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
-            Donde la <span className="text-gradient">habilidad</span> se convierte en premio
-          </h1>
-          <p className="mt-5 mx-auto max-w-lg text-muted leading-relaxed animate-fade-up" style={{ animationDelay: ".1s" }}>
-            Plataforma competitiva para jugadores de LATAM. Retos 1v1, torneos y ranking profesional.
-          </p>
-
-          {/* CTAs */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: ".2s" }}>
-            <Link
-              href="/registro"
-              className="bg-gradient-main text-white rounded-xl px-10 py-4 font-bold text-lg glow-strong hover:scale-105 transition-transform"
-            >
-              Competir Ahora
-            </Link>
-            <Link
-              href="/como-funciona"
-              className="btn-secondary-brand rounded-xl px-10 py-4 font-semibold text-base"
-            >
-              Como Funciona
-            </Link>
-          </div>
-        </div>
-
-        {/* Scroll hint */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-muted/30">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
         </div>
       </section>
 
-      {/* ════════ FLOW ════════ */}
-      <section className="neon-section neon-section-fuchsia bg-surface py-20 backdrop-blur-md sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tu camino a la victoria</h2>
-            <p className="mt-3 text-muted max-w-xl mx-auto">De registro a campeon en 8 pasos simples. Sin complicaciones, sin letra chica.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {steps.map((s, i) => (
-              <div key={s.n} className={`bg-surface-2 border border-border rounded-xl p-6 card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
-                <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-main text-white text-sm font-bold mb-4">
-                  {s.n}
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">{s.title}</h3>
-                <p className="text-muted text-sm leading-relaxed">{s.desc}</p>
-              </div>
+      {/* ════════ QUICK ACTIONS — CK style ════════ */}
+      <section className="py-12 sm:py-16">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { href: "/competir", label: "Retos 1v1", desc: "Encuentra un rival", icon: <IconCrosshair className="h-6 w-6 text-red-400" /> },
+              { href: "/torneos", label: "Torneos", desc: "Inscribete y compite", icon: <IconTrophy className="h-6 w-6 text-yellow-400" /> },
+              { href: "/ranking", label: "Ranking", desc: "Ve tu posicion", icon: <IconBracket className="h-6 w-6 text-blue-400" /> },
+              { href: "/tienda", label: "Tienda", desc: "Creditos y items", icon: <IconWallet className="h-6 w-6 text-green-400" /> },
+            ].map((a) => (
+              <Link key={a.href} href={a.href} className="bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 text-center card-hover group">
+                <div className="flex justify-center mb-3">{a.icon}</div>
+                <h3 className="font-semibold text-sm group-hover:text-gradient transition-colors">{a.label}</h3>
+                <p className="text-xs text-muted mt-1">{a.desc}</p>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════════ MODULES ════════ */}
-      <section className="neon-section neon-section-cyan py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Todo lo que necesitas para competir</h2>
-            <p className="mt-3 text-muted max-w-xl mx-auto">Herramientas disenadas para que solo te preocupes por ganar.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((f, i) => (
-              <div key={f.title} className={`bg-surface border border-border rounded-xl p-6 card-hover ${neonPanelCycle[(i + 1) % neonPanelCycle.length]}`}>
-                <div className="mb-4">{f.icon}</div>
-                <h3 className="font-semibold text-foreground mb-2">{f.title}</h3>
-                <p className="text-muted text-sm leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════ TRUST ════════ */}
-      <section className="neon-section neon-section-red bg-surface py-20 backdrop-blur-md sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tu competencia, protegida</h2>
-            <p className="mt-3 text-muted max-w-xl mx-auto">Transparencia, seguridad y fair play son la base de todo lo que hacemos.</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {trustCards.map((card, i) => (
-              <div key={card.title} className={`bg-surface-2 border border-border rounded-xl p-6 card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
-                <div className="mb-4">{card.icon}</div>
-                <h3 className="font-semibold text-foreground text-lg mb-4">{card.title}</h3>
-                <ul className="space-y-3">
-                  {card.bullets.map((b, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 text-cyan-300 shrink-0">
-                        <IconCheck className="h-4 w-4" />
-                      </span>
-                      <span className="text-muted text-sm leading-relaxed">{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════ TIERS PREVIEW ════════ */}
-      <section className="neon-section neon-section-fuchsia py-16 sm:py-20">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Sistema de Clasificacion</h2>
-            <p className="mt-2 text-muted text-sm">Sube de tier compitiendo. Tu nivel habla por ti.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {tiers.map((t, i) => (
-              <div key={t.name} className={`bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 text-center card-hover ${neonPanelCycle[i % neonPanelCycle.length]}`}>
-                <div className="mb-2">{tierBadge(t.name)}</div>
-                <div className="text-xs text-muted mb-2">{t.range}</div>
-                <p className="text-muted text-xs leading-relaxed">{t.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-6">
-            <Link href="/ranking" className="text-sm text-muted hover:text-foreground transition-colors underline underline-offset-4">
-              Ver ranking completo
-            </Link>
+      {/* ════════ FEATURED GAME ════════ */}
+      <section className="py-12 sm:py-16">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gradient-main flex items-center justify-center shrink-0">
+              <IconCrosshair className="h-10 w-10 text-white" />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <p className="text-xs text-muted uppercase tracking-wider mb-1">Juego destacado</p>
+              <h2 className="text-xl sm:text-2xl font-bold">Call of Duty: Warzone</h2>
+              <p className="text-sm text-muted mt-1">Retos, torneos y ranking activos. El juego principal de Phoenix Arena.</p>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/competir" className="bg-gradient-main text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity">Competir</Link>
+              <Link href="/torneos" className="border border-border-light rounded-lg px-5 py-2.5 text-sm font-medium text-foreground hover:bg-surface-2 transition-colors">Torneos</Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ════════ TOURNAMENTS PREVIEW ════════ */}
-      <section className="neon-section neon-section-cyan bg-surface py-20 backdrop-blur-md sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Torneos Activos</h2>
-            <p className="mt-3 text-muted max-w-xl mx-auto">Inscribete, compite y llevate la bolsa de premios.</p>
+      <section className="py-12 sm:py-16">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Torneos</h2>
+            <Link href="/torneos" className="text-sm text-muted hover:text-foreground transition-colors">Ver todos</Link>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tournaments.map((t, i) => (
-              <div key={t.name} className={`bg-surface-2 border border-border rounded-xl p-6 card-hover flex flex-col ${neonPanelCycle[(i + 2) % neonPanelCycle.length]}`}>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tournaments.map((t) => (
+              <Link key={t.name} href="/torneos" className="bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 card-hover flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs font-semibold ${t.statusColor}`}>{t.status}</span>
-                  <IconCalendar className="h-4 w-4 text-muted" />
+                  <span className="text-xs text-muted">{t.game}</span>
                 </div>
-                <h3 className="font-semibold text-foreground text-lg mb-1">{t.name}</h3>
-                <p className="text-muted text-sm mb-4">{t.game}</p>
-
-                <div className="mt-auto space-y-2.5 pt-4 border-t border-border">
-                  <div className="flex justify-between text-sm">
+                <h3 className="font-semibold mb-3">{t.name}</h3>
+                <div className="mt-auto space-y-2 pt-3 border-t border-border text-sm">
+                  <div className="flex justify-between">
                     <span className="text-muted">Premio</span>
-                    <span className="neon-cyan-text font-semibold">{t.prize}</span>
+                    <span className="text-success font-semibold">{t.prize}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span className="text-muted">Entrada</span>
-                    <span className="text-foreground">{t.entry}</span>
+                    <span>{t.entry}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span className="text-muted">Cupos</span>
-                    <span className="text-foreground flex items-center gap-1.5">
-                      <IconUsers className="h-3.5 w-3.5" />
-                      {t.spots}
-                    </span>
+                    <span>{t.spots}</span>
                   </div>
                 </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                <Link
-                  href="/torneos"
-                  className="mt-5 block text-center border border-border-light rounded-lg px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface-3 transition-colors"
-                >
-                  Ver Torneo
-                </Link>
+      {/* ════════ HOW IT WORKS — compact ════════ */}
+      <section className="py-12 sm:py-16 bg-surface/50 backdrop-blur-md">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <h2 className="text-xl sm:text-2xl font-bold mb-8 text-center">Como funciona</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { n: "1", t: "Registrate", d: "Crea tu cuenta gratis" },
+              { n: "2", t: "Deposita", d: "Agrega saldo con PayPal" },
+              { n: "3", t: "Compite", d: "Retos 1v1 o torneos" },
+              { n: "4", t: "Gana", d: "Cobra tu premio al instante" },
+            ].map((s) => (
+              <div key={s.n} className="text-center">
+                <div className="w-10 h-10 rounded-full bg-gradient-main text-white font-bold flex items-center justify-center mx-auto mb-3">{s.n}</div>
+                <h3 className="font-semibold text-sm">{s.t}</h3>
+                <p className="text-xs text-muted mt-1">{s.d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════════ FAQ ════════ */}
-      <section className="neon-section neon-section-fuchsia py-20 sm:py-28">
+      {/* ════════ FAQ — compact ════════ */}
+      <section className="py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Preguntas Frecuentes</h2>
-            <p className="mt-3 text-muted">Todo lo que necesitas saber antes de empezar.</p>
-          </div>
-
-          <div className="space-y-3">
+          <h2 className="text-xl sm:text-2xl font-bold mb-6 text-center">Preguntas Frecuentes</h2>
+          <div className="space-y-2">
             {faqs.map((faq, i) => (
-              <details key={i} className={`group bg-surface border border-border rounded-xl overflow-hidden ${neonPanelCycle[i % neonPanelCycle.length]}`}>
-                <summary className="flex items-center justify-between cursor-pointer px-6 py-4 text-foreground font-medium text-sm hover:bg-surface-2 transition-colors">
+              <details key={i} className="group bg-surface/50 border border-border rounded-xl overflow-hidden">
+                <summary className="flex items-center justify-between cursor-pointer px-5 py-3.5 text-foreground font-medium text-sm hover:bg-surface-2 transition-colors">
                   {faq.q}
                   <span className="ml-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180">
                     <ChevronIcon />
                   </span>
                 </summary>
-                <div className="px-6 pb-5 text-muted text-sm leading-relaxed">
-                  {faq.a}
-                </div>
+                <div className="px-5 pb-4 text-muted text-sm leading-relaxed">{faq.a}</div>
               </details>
             ))}
           </div>
@@ -518,18 +445,15 @@ export default function Home() {
       </section>
 
       {/* ════════ CTA FINAL ════════ */}
-      <section className="bg-gradient-cta py-20 sm:py-28">
+      <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Listo para demostrar de que estas hecho?
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4">
+            Listo para competir?
           </h2>
-          <p className="text-muted mb-10 max-w-lg mx-auto">
-            Unete a la comunidad competitiva mas grande de LATAM. Tu primer reto te esta esperando.
+          <p className="text-muted mb-8 max-w-md mx-auto text-sm">
+            Unete a la comunidad competitiva de Warzone en LATAM.
           </p>
-          <Link
-            href="/registro"
-            className="bg-gradient-main text-white rounded-xl px-10 py-4 font-semibold text-lg animate-pulse-glow inline-block hover:opacity-90 transition-opacity"
-          >
+          <Link href="/registro" className="bg-gradient-main text-white rounded-xl px-10 py-4 font-semibold text-lg inline-block hover:opacity-90 transition-opacity">
             Crear Cuenta Gratis
           </Link>
         </div>
