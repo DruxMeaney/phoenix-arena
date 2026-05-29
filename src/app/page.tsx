@@ -338,7 +338,7 @@ export default function Home() {
               { href: "/ranking", label: "Ranking", desc: "Ve tu posicion", icon: <IconBracket className="h-6 w-6 text-blue-400" /> },
               { href: "/tienda", label: "Tienda", desc: "Creditos y items", icon: <IconWallet className="h-6 w-6 text-green-400" /> },
             ].map((a) => (
-              <Link key={a.href} href={a.href} className="bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 text-center card-hover group">
+              <Link key={a.href} href={a.href} className="bg-surface border border-border rounded-xl p-5 text-center card-hover group">
                 <div className="flex justify-center mb-3">{a.icon}</div>
                 <h3 className="font-semibold text-sm group-hover:text-gradient transition-colors">{a.label}</h3>
                 <p className="text-xs text-muted mt-1">{a.desc}</p>
@@ -351,10 +351,8 @@ export default function Home() {
       {/* ════════ FEATURED GAME ════════ */}
       <section className="py-12 sm:py-16">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gradient-main flex items-center justify-center shrink-0">
-              <IconCrosshair className="h-10 w-10 text-white" />
-            </div>
+          <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+            <img src="/warzone-cover.jpg" alt="Call of Duty: Warzone" className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0" />
             <div className="flex-1 text-center sm:text-left">
               <p className="text-xs text-muted uppercase tracking-wider mb-1">Juego destacado</p>
               <h2 className="text-xl sm:text-2xl font-bold">Call of Duty: Warzone</h2>
@@ -377,7 +375,7 @@ export default function Home() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {tournaments.map((t) => (
-              <Link key={t.name} href="/torneos" className="bg-surface/50 backdrop-blur-sm border border-border rounded-xl p-5 card-hover flex flex-col">
+              <Link key={t.name} href="/torneos" className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs font-semibold ${t.statusColor}`}>{t.status}</span>
                   <span className="text-xs text-muted">{t.game}</span>
@@ -404,7 +402,7 @@ export default function Home() {
       </section>
 
       {/* ════════ HOW IT WORKS — compact ════════ */}
-      <section className="py-12 sm:py-16 bg-surface/50 backdrop-blur-md">
+      <section className="py-12 sm:py-16 bg-surface">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <h2 className="text-xl sm:text-2xl font-bold mb-8 text-center">Como funciona</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -430,7 +428,7 @@ export default function Home() {
           <h2 className="text-xl sm:text-2xl font-bold mb-6 text-center">Preguntas Frecuentes</h2>
           <div className="space-y-2">
             {faqs.map((faq, i) => (
-              <details key={i} className="group bg-surface/50 border border-border rounded-xl overflow-hidden">
+              <details key={i} className="group bg-surface border border-border rounded-xl overflow-hidden">
                 <summary className="flex items-center justify-between cursor-pointer px-5 py-3.5 text-foreground font-medium text-sm hover:bg-surface-2 transition-colors">
                   {faq.q}
                   <span className="ml-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180">
