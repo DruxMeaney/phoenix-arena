@@ -28,14 +28,12 @@ function PhoenixLogo({ className = "h-8 w-8" }: { className?: string }) {
 }
 
 const platformLinks = [
-  { href: "/quickmatch", label: "QuickMatch" },
-  { href: "/retos", label: "Retos" },
-  { href: "/ladder", label: "Arena Ladder" },
+  { href: "/competir", label: "Competir" },
   { href: "/torneos", label: "Torneos" },
   { href: "/ranking", label: "Ranking" },
-  { href: "/tienda", label: "Tienda Phoenix" },
+  { href: "/comunidad", label: "Comunidad" },
+  { href: "/tienda", label: "Tienda" },
   { href: "/wallet", label: "Monedero" },
-  { href: "/pulso", label: "Pulso" },
 ];
 
 const infoLinks = [

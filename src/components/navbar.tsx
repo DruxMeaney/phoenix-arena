@@ -6,13 +6,11 @@ import { useState, useEffect } from "react";
 
 const navLinks = [
   { href: "/", label: "Inicio" },
-  { href: "/retos", label: "Retos" },
+  { href: "/competir", label: "Competir" },
   { href: "/torneos", label: "Torneos" },
-  { href: "/ladder", label: "Ladder" },
   { href: "/ranking", label: "Ranking" },
   { href: "/comunidad", label: "Comunidad" },
   { href: "/tienda", label: "Tienda" },
-  { href: "/pulso", label: "Pulso" },
 ];
 
 interface UserInfo {
@@ -97,7 +95,7 @@ export function Navbar() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 border border-border rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "rgba(13,13,24,0.97)", backdropFilter: "blur(20px)" }}>
+                <div className="absolute right-0 top-full mt-2 w-48 border border-border rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "rgba(13,13,24,0.97)", backdropFilter: "blur(20px)" }}>
                   <Link href="/perfil" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                     Mi Perfil
@@ -105,14 +103,6 @@ export function Navbar() {
                   <Link href="/wallet" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
                     Monedero
-                  </Link>
-                  <Link href="/boveda" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>
-                    Mi Boveda
-                  </Link>
-                  <Link href="/resultados" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2 transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
-                    Resultados
                   </Link>
                   <div className="border-t border-border">
                     <a href="/api/auth/logout" className="flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors">
@@ -203,8 +193,6 @@ export function Navbar() {
                   {[
                     { href: "/perfil", label: "Mi Perfil" },
                     { href: "/wallet", label: "Monedero" },
-                    { href: "/boveda", label: "Mi Boveda" },
-                    { href: "/resultados", label: "Resultados" },
                   ].map((link) => (
                     <Link key={link.href} href={link.href} className="block px-4 py-3.5 text-base font-medium rounded-xl text-muted hover:text-foreground hover:bg-surface-2 transition-colors">
                       {link.label}
