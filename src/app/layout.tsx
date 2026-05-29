@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteFrame } from "@/components/site-frame";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const sora = Sora({ variable: "--font-sora", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["400", "500", "700"] });
 
 export const metadata: Metadata = {
   title: "Phoenix Arena — Plataforma Competitiva de Habilidad",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="es" className={`${sora.variable} ${jetbrains.variable} antialiased`}>
       <body className="min-h-dvh flex flex-col relative">
         <SiteFrame>{children}</SiteFrame>
       </body>
