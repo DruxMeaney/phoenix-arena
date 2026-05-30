@@ -311,11 +311,12 @@ function TournamentCard({
   }, [t.id, t.entryFee, balance, onChange]);
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-5 card-hover flex flex-col gap-4">
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 flex-wrap">
+    <div className="bg-surface border border-border rounded-xl hover:border-border-light transition-colors">
+      {/* ── Horizontal row layout (CK-style) ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5">
+        {/* Left: Name + badges */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
             <span className={`${badgeClass(t.tournamentType)} text-[10px] font-bold uppercase px-2 py-0.5 rounded-full tracking-wide`}>
               {tournamentTypeLabel(t.tournamentType)}
             </span>
@@ -324,102 +325,63 @@ function TournamentCard({
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400">Inscrito</span>
             )}
           </div>
-          <h3 className="text-lg font-bold text-foreground mt-1">{t.name}</h3>
+          <h3 className="text-base font-bold text-foreground truncate">
+            ${t.prizePool.toFixed(0)} {t.format} {t.name}
+          </h3>
+          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted flex-wrap">
+            <span className="flex items-center gap-1"><GamepadIcon className="h-3.5 w-3.5" /> {t.game}</span>
+            <span className="flex items-center gap-1"><UsersIcon className="h-3.5 w-3.5" /> {t.format}</span>
+            <span className="flex items-center gap-1"><ClockIcon className="h-3.5 w-3.5" /> {formatStartDate(t.startDate)}</span>
+          </div>
         </div>
-        <TrophyIcon className="h-6 w-6 text-red-400 shrink-0" />
-      </div>
 
-      {/* Meta */}
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="flex items-center gap-1.5 text-muted"><GamepadIcon /> {t.game}</div>
-        <div className="flex items-center gap-1.5 text-muted"><UsersIcon /> {t.format}</div>
-        <div className="flex items-center gap-1.5 text-muted"><DollarIcon /> Entrada: ${t.entryFee.toFixed(2)}</div>
-        <div className="flex items-center gap-1.5 text-muted"><ClockIcon /> {formatStartDate(t.startDate)}</div>
-      </div>
-
-      {/* Prize pool */}
-      <div className="bg-surface-2 rounded-lg p-3 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs text-muted uppercase tracking-wide">Pozo de premios</p>
-          <p className="text-xl font-bold text-blue-400">${t.prizePool.toFixed(2)}</p>
+        {/* Center: Prize + Slots */}
+        <div className="flex items-center gap-6 sm:gap-8 shrink-0">
+          <div className="text-center">
+            <p className="text-xs text-muted">Premio</p>
+            <p className="text-lg font-bold text-blue-400 font-mono">${t.prizePool.toFixed(0)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted">Entrada</p>
+            <p className="text-sm font-semibold font-mono">{t.entryFee > 0 ? `$${t.entryFee.toFixed(0)}` : "Gratis"}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted">Cupos</p>
+            <p className="text-sm font-semibold font-mono">{t.filledSlots}/{t.maxSlots}</p>
+          </div>
+          <div className="hidden sm:block w-24">
+            <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-main rounded-full transition-all" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
         </div>
-        <div className="flex gap-1.5 flex-wrap justify-end">
-          {distribution.slice(0, 4).map((d, i) => (
-            <span key={i} className="text-[10px] bg-surface-3 border border-border-light text-muted px-1.5 py-0.5 rounded">
-              {i === 0 ? "1ro" : i === 1 ? "2do" : i === 2 ? "3ro" : "4to"} {d}%
-            </span>
-          ))}
-          {distribution.length > 4 && (
-            <span className="text-[10px] bg-surface-3 border border-border-light text-muted px-1.5 py-0.5 rounded">
-              +{distribution.length - 4}
-            </span>
+
+        {/* Right: CTA */}
+        <div className="shrink-0 sm:w-40">
+          {error && <p className="text-[10px] text-red-400 mb-1">{error}</p>}
+          {!currentUserId ? (
+            <a href="/login" className="pa-btn pa-btn--subtle pa-btn--sm pa-btn--block">Iniciar sesion</a>
+          ) : t.status === "in_progress" || t.status === "check_in" ? (
+            <button className="pa-btn pa-btn--ghost pa-btn--sm pa-btn--block">Ver Bracket</button>
+          ) : t.status === "finished" || t.status === "cancelled" ? (
+            <button disabled className="pa-btn pa-btn--subtle pa-btn--sm pa-btn--block">{t.status === "finished" ? "Finalizado" : "Cancelado"}</button>
+          ) : canLeave ? (
+            <button onClick={handleLeave} disabled={busy !== null} className="pa-btn pa-btn--ghost pa-btn--sm pa-btn--block" style={{ borderColor: "rgba(255,77,77,.3)", color: "#ff6b85" }}>
+              {busy === "leave" ? "..." : "Salir"}
+            </button>
+          ) : isFull ? (
+            <button disabled className="pa-btn pa-btn--subtle pa-btn--sm pa-btn--block">Lleno</button>
+          ) : needsTopUp ? (
+            <button onClick={handlePayPalJoin} disabled={busy !== null} className="pa-btn pa-btn--primary pa-btn--sm pa-btn--block">
+              {busy === "paypal" ? "..." : `PayPal $${t.entryFee.toFixed(0)}`}
+            </button>
+          ) : (
+            <button onClick={handleJoinWithWallet} disabled={busy !== null} className="pa-btn pa-btn--primary pa-btn--sm pa-btn--block">
+              {busy === "join" ? "..." : `Inscribirme $${t.entryFee.toFixed(0)}`}
+            </button>
           )}
         </div>
       </div>
-
-      {/* Progress */}
-      <div>
-        <div className="flex justify-between text-xs text-muted mb-1.5">
-          <span>Cupos</span>
-          <span>{t.filledSlots}/{t.maxSlots}</span>
-        </div>
-        <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-main rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{error}</div>
-      )}
-
-      {/* CTA */}
-      {!currentUserId ? (
-        <a href="/login" className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted hover:text-foreground text-center transition-colors">
-          Inicia sesion para inscribirte
-        </a>
-      ) : t.status === "in_progress" || t.status === "check_in" ? (
-        <button className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted cursor-default">
-          Ver Bracket
-        </button>
-      ) : t.status === "finished" || t.status === "cancelled" ? (
-        <button className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted cursor-default">
-          {t.status === "finished" ? "Torneo finalizado" : "Torneo cancelado"}
-        </button>
-      ) : canLeave ? (
-        <button
-          onClick={handleLeave}
-          disabled={busy !== null}
-          className="w-full py-2.5 rounded-lg text-sm font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-        >
-          {busy === "leave" ? "Saliendo..." : "Salir (reembolso)"}
-        </button>
-      ) : isFull ? (
-        <button className="w-full py-2.5 rounded-lg text-sm font-semibold bg-surface-3 border border-border text-muted cursor-default">
-          Torneo lleno
-        </button>
-      ) : needsTopUp ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted">
-            Saldo actual: <span className="text-foreground font-medium">${balance.toFixed(2)}</span>. Faltan ${(t.entryFee - balance).toFixed(2)}.
-          </p>
-          <button
-            onClick={handlePayPalJoin}
-            disabled={busy !== null}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-main text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {busy === "paypal" ? "Procesando..." : `Pagar con PayPal ($${t.entryFee.toFixed(2)})`}
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={handleJoinWithWallet}
-          disabled={busy !== null}
-          className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-main text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {busy === "join" ? "Inscribiendo..." : `Inscribirme ($${t.entryFee.toFixed(2)})`}
-        </button>
-      )}
     </div>
   );
 }
@@ -595,7 +557,7 @@ export default function TorneosPage() {
           <div className="space-y-12">
             {/* Cards grid */}
             {tournamentsLoading ? (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-3">
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-72" />
                 ))}
@@ -610,7 +572,7 @@ export default function TorneosPage() {
                 No hay torneos activos por ahora. Vuelve pronto.
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-3">
                 {activeTournaments.map((t) => (
                   <TournamentCard
                     key={t.id}
@@ -680,7 +642,7 @@ export default function TorneosPage() {
         {/* Upcoming tab */}
         {tab === "proximos" && (
           tournamentsLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-3">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-48" />
               ))}
@@ -690,7 +652,7 @@ export default function TorneosPage() {
               No hay torneos proximos programados.
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-3">
               {upcomingTournaments.map((t) => (
                 <TournamentCard
                   key={t.id}
@@ -707,7 +669,7 @@ export default function TorneosPage() {
         {/* Finished tab */}
         {tab === "finalizados" && (
           tournamentsLoading ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-3">
               {[0, 1].map((i) => (
                 <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-32" />
               ))}
@@ -717,7 +679,7 @@ export default function TorneosPage() {
               No hay torneos finalizados todavia.
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-3">
               {finishedTournaments.map((t) => {
                 const winnerEntry = t.entries.find((e) => e.user); // entries don't include placement here
                 return (
