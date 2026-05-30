@@ -348,11 +348,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ════════ ACTION BANNER ════════ */}
+      <section className="py-4 sm:py-6">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="relative rounded-2xl overflow-hidden h-40 sm:h-56">
+            <img src="/warzone-action.jpg" alt="Warzone Action" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+            <div className="absolute inset-0 flex items-center px-6 sm:px-10">
+              <div>
+                <p className="text-xs text-muted uppercase tracking-wider mb-1">Temporada activa</p>
+                <h2 className="text-xl sm:text-2xl font-bold">Warzone Verdansk</h2>
+                <p className="text-sm text-muted mt-1 max-w-xs">Torneos y retos disponibles ahora. Compite por premios reales.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ════════ FEATURED GAME ════════ */}
       <section className="py-12 sm:py-16">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-            <img src="/warzone-cover.jpg" alt="Call of Duty: Warzone" className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0" />
+            <img src="/warzone-hero.jpg" alt="Call of Duty: Warzone" className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0" />
             <div className="flex-1 text-center sm:text-left">
               <p className="text-xs text-muted uppercase tracking-wider mb-1">Juego destacado</p>
               <h2 className="text-xl sm:text-2xl font-bold">Call of Duty: Warzone</h2>
