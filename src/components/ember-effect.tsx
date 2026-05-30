@@ -76,7 +76,7 @@ export function EmberEffect() {
         size: 1 + Math.random() * 3,
         life: 0,
         maxLife: 120 + Math.random() * 180,
-        hue: Math.random() * 30, // red to orange
+        hue: 20 + Math.random() * 25, // pumpkin orange (20-45)
         brightness: 0.5 + Math.random() * 0.5,
       });
     }
@@ -95,35 +95,35 @@ export function EmberEffect() {
       time++;
       ctx.clearRect(0, 0, w(), h());
 
-      // ── Bottom glow (burning effect) — covers 70% of viewport ──
+      // ── Bottom glow — electric pumpkin orange ──
       const glowHeight = h() * 0.7;
       const gradient = ctx.createLinearGradient(0, h(), 0, h() - glowHeight);
-      gradient.addColorStop(0, "rgba(220, 38, 38, 0.18)");
-      gradient.addColorStop(0.15, "rgba(239, 68, 68, 0.12)");
-      gradient.addColorStop(0.3, "rgba(249, 115, 22, 0.07)");
-      gradient.addColorStop(0.5, "rgba(249, 115, 22, 0.03)");
-      gradient.addColorStop(0.7, "rgba(180, 60, 20, 0.01)");
+      gradient.addColorStop(0, "rgba(255, 107, 0, 0.22)");
+      gradient.addColorStop(0.12, "rgba(255, 140, 0, 0.16)");
+      gradient.addColorStop(0.25, "rgba(255, 165, 0, 0.10)");
+      gradient.addColorStop(0.4, "rgba(255, 120, 0, 0.06)");
+      gradient.addColorStop(0.6, "rgba(255, 90, 0, 0.03)");
       gradient.addColorStop(1, "transparent");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, h() - glowHeight, w(), glowHeight);
 
-      // Secondary warm glow layer
+      // Secondary hot orange layer
       const warmGlow = ctx.createLinearGradient(0, h(), 0, h() - h() * 0.35);
-      warmGlow.addColorStop(0, "rgba(255, 100, 30, 0.10)");
-      warmGlow.addColorStop(0.5, "rgba(200, 50, 20, 0.04)");
+      warmGlow.addColorStop(0, "rgba(255, 130, 0, 0.14)");
+      warmGlow.addColorStop(0.4, "rgba(255, 100, 0, 0.06)");
       warmGlow.addColorStop(1, "transparent");
       ctx.fillStyle = warmGlow;
       ctx.fillRect(0, h() - h() * 0.35, w(), h() * 0.35);
 
-      // Pulsing glow around logo — larger radius
+      // Pulsing glow around logo — electric orange
       const pulse = Math.sin(time * 0.02) * 0.3 + 0.7;
       const logoGlow = ctx.createRadialGradient(
         logoX(), logoY(), 0,
         logoX(), logoY(), 350 * pulse
       );
-      logoGlow.addColorStop(0, `rgba(220, 38, 38, ${0.20 * pulse})`);
-      logoGlow.addColorStop(0.3, `rgba(239, 68, 68, ${0.10 * pulse})`);
-      logoGlow.addColorStop(0.6, `rgba(249, 115, 22, ${0.04 * pulse})`);
+      logoGlow.addColorStop(0, `rgba(255, 107, 0, ${0.25 * pulse})`);
+      logoGlow.addColorStop(0.3, `rgba(255, 140, 0, ${0.14 * pulse})`);
+      logoGlow.addColorStop(0.6, `rgba(255, 165, 0, ${0.06 * pulse})`);
       logoGlow.addColorStop(1, "transparent");
       ctx.fillStyle = logoGlow;
       ctx.fillRect(0, h() - 600, 700, 600);
@@ -138,7 +138,7 @@ export function EmberEffect() {
 
         ctx.beginPath();
         ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(220, 38, 38, ${w.opacity * 0.5})`;
+        ctx.strokeStyle = `rgba(255, 107, 0, ${w.opacity * 0.5})`;
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
@@ -220,15 +220,15 @@ export function EmberEffect() {
       <div className="fixed bottom-6 left-6 z-0 pointer-events-none">
         {/* Radiant backlight */}
         <div className="absolute inset-0 -m-16 sm:-m-24">
-          <div className="absolute inset-0 rounded-full bg-red-600/20 blur-[60px] animate-pulse" />
-          <div className="absolute inset-0 rounded-full bg-[#2d1b69]/25 blur-[40px]" />
-          <div className="absolute inset-0 scale-75 rounded-full bg-orange-500/15 blur-[30px]" />
+          <div className="absolute inset-0 rounded-full bg-[#ff6b00]/25 blur-[60px] animate-pulse" />
+          <div className="absolute inset-0 rounded-full bg-[#ff8c00]/20 blur-[40px]" />
+          <div className="absolute inset-0 scale-75 rounded-full bg-[#ffa500]/18 blur-[30px]" />
         </div>
         <img
           src="/logo-silhouette.png"
           alt=""
           className="relative w-40 sm:w-56 lg:w-72 opacity-30 sm:opacity-40"
-          style={{ filter: "brightness(0.8) saturate(2) drop-shadow(0 0 20px rgba(220,38,38,0.4))" }}
+          style={{ filter: "brightness(0.8) saturate(2) drop-shadow(0 0 20px rgba(255,107,0,0.5))" }}
         />
       </div>
     </>
