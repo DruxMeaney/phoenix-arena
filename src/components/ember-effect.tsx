@@ -220,15 +220,15 @@ export function EmberEffect() {
       <div className="fixed bottom-6 left-6 z-0 pointer-events-none">
         {/* Radiant backlight */}
         <div className="absolute inset-0 -m-16 sm:-m-24">
-          <div className="absolute inset-0 rounded-full bg-[#ff6b00]/25 blur-[60px] animate-pulse" />
-          <div className="absolute inset-0 rounded-full bg-[#ff8c00]/20 blur-[40px]" />
-          <div className="absolute inset-0 scale-75 rounded-full bg-[#ffa500]/18 blur-[30px]" />
+          <div className="absolute inset-0 rounded-full bg-[#7c3aed]/25 blur-[60px] animate-pulse" />
+          <div className="absolute inset-0 rounded-full bg-[#2d1b69]/30 blur-[40px]" />
+          <div className="absolute inset-0 scale-75 rounded-full bg-[#a855f7]/15 blur-[30px]" />
         </div>
         <img
           src="/logo-silhouette.png"
           alt=""
           className="relative w-40 sm:w-56 lg:w-72 opacity-30 sm:opacity-40"
-          style={{ filter: "brightness(0.8) saturate(2) drop-shadow(0 0 20px rgba(255,107,0,0.5))" }}
+          style={{ filter: "brightness(0.8) saturate(2) drop-shadow(0 0 20px rgba(168,85,247,0.4))" }}
         />
       </div>
     </>
