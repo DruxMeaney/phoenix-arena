@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { getAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 
 /** GET /api/disputes — List disputes (admin) or user's disputes */
 export async function GET() {
-  const user = await getAuthenticatedUser();
+  const authUser = await getAuthenticatedUser();
+  const adminUser = !authUser ? await getAdminUser() : null;
+  const user = authUser ?? adminUser;
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const where = user.role === "admin" ? {} : { reporterId: user.id };
@@ -29,7 +32,9 @@ export async function GET() {
 
 /** PUT /api/disputes — Resolve a dispute (admin only) */
 export async function PUT(request: NextRequest) {
-  const user = await getAuthenticatedUser();
+  const authUser = await getAuthenticatedUser();
+  const adminUser = !authUser ? await getAdminUser() : null;
+  const user = authUser ?? adminUser;
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }

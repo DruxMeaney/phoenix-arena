@@ -52,20 +52,40 @@ export async function GET() {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const tournaments = await prisma.tournament.findMany({
-    include: {
-      entries: {
-        include: { user: { select: { id: true, username: true, avatar: true, tier: true } } },
+  try {
+    const tournaments = await prisma.tournament.findMany({
+      include: {
+        entries: {
+          include: { user: { select: { id: true, username: true, avatar: true, tier: true } } },
+        },
+        results: {
+          include: { user: { select: { id: true, username: true, avatar: true } } },
+        },
+        creator: { select: { id: true, username: true } },
       },
-      results: {
-        include: { user: { select: { id: true, username: true, avatar: true } } },
-      },
-      creator: { select: { id: true, username: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json({ tournaments });
+    return NextResponse.json({ tournaments });
+  } catch (err) {
+    console.error("Admin tournaments GET error:", err);
+    // Fallback: try without results relation in case of schema mismatch
+    try {
+      const tournaments = await prisma.tournament.findMany({
+        include: {
+          entries: {
+            include: { user: { select: { id: true, username: true, avatar: true, tier: true } } },
+          },
+          creator: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return NextResponse.json({ tournaments: tournaments.map((t: Record<string, unknown>) => ({ ...t, results: [] })) });
+    } catch (fallbackErr) {
+      console.error("Admin tournaments fallback error:", fallbackErr);
+      return NextResponse.json({ error: "Error al cargar torneos", detail: String(fallbackErr) }, { status: 500 });
+    }
+  }
 }
 
 /** POST /api/admin/tournaments — Create a tournament */
