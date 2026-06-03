@@ -11,7 +11,7 @@ import AdminDisputes from "./components/AdminDisputes";
 import AdminTransactions from "./components/AdminTransactions";
 import AdminActivity from "./components/AdminActivity";
 
-type Section = "dashboard" | "torneos" | "retos" | "tienda" | "usuarios" | "disputas" | "transacciones" | "actividad";
+type Section = "dashboard" | "torneos" | "tienda" | "usuarios" | "disputas" | "transacciones" | "actividad";
 
 type SectionHelp = {
   purpose: string;
@@ -37,15 +37,6 @@ const SECTIONS: { key: Section; label: string; icon: ReactNode }[] = [
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0016.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.023 6.023 0 01-2.27.308m4.27-5.536V2.721" />
-      </svg>
-    ),
-  },
-  {
-    key: "retos",
-    label: "Retos",
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
       </svg>
     ),
   },
@@ -118,17 +109,6 @@ const SECTION_HELP: Record<Section, SectionHelp> = {
     risk: "Los resultados de torneo pueden modificar ranking, reputación y premios; revisa dos veces antes de guardar.",
     assistantTitle: "Torneos impactan ranking y dinero",
     assistantBody: "Aquí conviene trabajar con evidencia a la vista. Si vas a registrar resultados, asegúrate de que el torneo y la versión de captura sean correctos.",
-  },
-  retos: {
-    purpose: "Supervisar partidas o retos entre jugadores: estado, aceptación, reporte y resolución básica.",
-    checks: [
-      "Revisa qué retos siguen pendientes o en progreso demasiado tiempo.",
-      "Contrasta resultado reportado con evidencia antes de resolver.",
-      "Observa si un usuario acumula patrones extraños de abandonos o disputas.",
-    ],
-    risk: "Un cambio incorrecto puede asignar victorias o liberar fondos al jugador equivocado.",
-    assistantTitle: "Resuelve retos con evidencia",
-    assistantBody: "No te bases solo en el texto del reporte. Busca consistencia entre usuarios, monto, estado y prueba enviada.",
   },
   tienda: {
     purpose: "Administrar artículos de tienda, precios, disponibilidad y recompensas visibles para usuarios.",
@@ -403,7 +383,7 @@ export default function AdminPage() {
           {/* Section Content */}
           {section === "dashboard" && <AdminDashboard />}
           {section === "torneos" && <AdminTournaments />}
-          {section === "retos" && <AdminMatches />}
+          {/* retos section removed */}
           {section === "tienda" && <AdminStore />}
           {section === "usuarios" && <AdminUsers />}
           {section === "disputas" && <AdminDisputes />}
